@@ -1,0 +1,58 @@
+object aboutForm: TaboutForm
+  Left = 917
+  Height = 144
+  Top = 151
+  Width = 383
+  Caption = 'About program'
+  ClientHeight = 144
+  ClientWidth = 383
+  LCLVersion = '1.6.0.4'
+  object logoImg: TImage
+    Left = 8
+    Height = 128
+    Top = 8
+    Width = 128
+  end
+  object textPanel: TPanel
+    Left = 144
+    Height = 128
+    Top = 8
+    Width = 232
+    BevelOuter = bvNone
+    ClientHeight = 128
+    ClientWidth = 232
+    TabOrder = 0
+    object authorLabel: TLabel
+      Left = 8
+      Height = 14
+      Top = 8
+      Width = 44
+      Caption = 'Author:'
+      ParentColor = False
+    end
+    object authorNameLabel: TLabel
+      Left = 128
+      Height = 14
+      Top = 8
+      Width = 91
+      Caption = 'Palenniy Dmitry'
+      ParentColor = False
+    end
+    object educationGroupLabel: TLabel
+      Left = 8
+      Height = 14
+      Top = 32
+      Width = 111
+      Caption = 'Educational group:'
+      ParentColor = False
+    end
+    object educationGroupNameLabel: TLabel
+      Left = 148
+      Height = 14
+      Top = 32
+      Width = 71
+      Caption = 'FEFU, 8103a'
+      ParentColor = False
+    end
+  end
+end

@@ -1,0 +1,7 @@
+lib/
+*.exe
+veceditor
+*.o
+*.bak
+*.ppu
+*.compiled

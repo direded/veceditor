@@ -1,0 +1,273 @@
+object MainForm: TMainForm
+  Left = 806
+  Height = 600
+  Top = 164
+  Width = 800
+  Caption = 'Graphic editor'
+  ClientHeight = 600
+  ClientWidth = 800
+  Constraints.MinHeight = 600
+  Constraints.MinWidth = 800
+  KeyPreview = True
+  Menu = MainMenu
+  OnCreate = MainFormCreate
+  OnKeyPress = MainFormKeyPress
+  LCLVersion = '1.6.0.4'
+  object ToolsPanel: TPanel
+    Left = 0
+    Height = 560
+    Top = 40
+    Width = 32
+    Anchors = [akTop, akLeft, akBottom]
+    BevelOuter = bvNone
+    ClientHeight = 560
+    ClientWidth = 32
+    ParentColor = False
+    TabOrder = 0
+    object PenColorPanel: TPanel
+      Left = 2
+      Height = 20
+      Top = 8
+      Width = 28
+      BevelOuter = bvNone
+      BorderStyle = bsSingle
+      TabOrder = 0
+      OnDblClick = PenColorPanelDblClick
+    end
+    object BrushColorPanel: TPanel
+      Left = 2
+      Height = 20
+      Top = 32
+      Width = 28
+      BevelOuter = bvNone
+      BorderStyle = bsSingle
+      TabOrder = 1
+      OnDblClick = BrushColorPanelDblClick
+    end
+  end
+  object MainPanel: TPanel
+    Left = 32
+    Height = 530
+    Top = 40
+    Width = 744
+    Anchors = [akTop, akLeft, akRight, akBottom]
+    BevelOuter = bvNone
+    BorderStyle = bsSingle
+    ClientHeight = 528
+    ClientWidth = 742
+    Color = clWhite
+    ParentColor = False
+    TabOrder = 1
+    object HoriPaintSpaceScrl: TScrollBar
+      Left = 0
+      Height = 13
+      Top = 516
+      Width = 730
+      Anchors = [akLeft, akRight, akBottom]
+      PageSize = 1
+      TabOrder = 0
+      OnChange = HoriPaintSpaceScrlChange
+    end
+    object VertPaintSpaceScrl: TScrollBar
+      Left = 730
+      Height = 516
+      Top = 0
+      Width = 13
+      Anchors = [akTop, akRight, akBottom]
+      Kind = sbVertical
+      PageSize = 1
+      TabOrder = 1
+      OnChange = VertPaintSpaceScrlChange
+    end
+    object ScrlsCrossingPanel: TPanel
+      Left = 730
+      Height = 13
+      Top = 516
+      Width = 13
+      Anchors = [akRight, akBottom]
+      BevelOuter = bvNone
+      TabOrder = 2
+    end
+    object PaintSpacePanel: TPanel
+      Left = 0
+      Height = 517
+      Top = 0
+      Width = 730
+      Anchors = [akTop, akLeft, akRight, akBottom]
+      BevelOuter = bvNone
+      ClientHeight = 517
+      ClientWidth = 730
+      TabOrder = 3
+      object PaintSpacePaintBox: TPaintBox
+        Left = 0
+        Height = 517
+        Top = 0
+        Width = 730
+        Align = alClient
+        Color = clWhite
+        ParentColor = False
+        OnMouseDown = PaintSpacePaintBoxMouseDown
+        OnMouseMove = PaintSpacePaintBoxMouseMove
+        OnMouseUp = PaintSpacePaintBoxMouseUp
+        OnMouseWheelDown = PaintSpacePaintBoxMouseWheelDown
+        OnMouseWheelUp = PaintSpacePaintBoxMouseWheelUp
+        OnPaint = PaintSpacePaintBoxPaint
+        OnResize = PaintSpacePaintBoxResize
+      end
+    end
+  end
+  object ColorBarPanel: TPanel
+    Left = 776
+    Height = 560
+    Top = 40
+    Width = 24
+    Anchors = [akTop, akRight, akBottom]
+    BevelOuter = bvNone
+    ClientHeight = 560
+    ClientWidth = 24
+    TabOrder = 2
+    object ColorBarGrid: TDrawGrid
+      Left = 0
+      Height = 560
+      Top = 0
+      Width = 24
+      Align = alClient
+      AutoEdit = False
+      BorderStyle = bsNone
+      Color = clInactiveBorder
+      DefaultColWidth = 24
+      DefaultDrawing = False
+      DefaultRowHeight = 24
+      ExtendedSelect = False
+      FixedColor = clWindow
+      FixedCols = 0
+      FixedRows = 0
+      MouseWheelOption = mwGrid
+      Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goDontScrollPartCell]
+      ScrollBars = ssNone
+      TabOrder = 0
+      TabStop = False
+      OnDrawCell = ColorBarGridDrawCell
+      OnMouseDown = ColorBarGridMouseDown
+    end
+  end
+  object ToolParamsPanel: TPanel
+    Left = 0
+    Height = 40
+    Top = 0
+    Width = 800
+    Anchors = [akTop, akLeft, akRight]
+    BevelOuter = bvNone
+    ParentColor = False
+    TabOrder = 3
+  end
+  object BottomPanel: TPanel
+    Left = 32
+    Height = 30
+    Top = 570
+    Width = 744
+    Anchors = [akLeft, akRight, akBottom]
+    BevelOuter = bvNone
+    ClientHeight = 30
+    ClientWidth = 744
+    TabOrder = 4
+    object ScaleSpinEdit: TFloatSpinEdit
+      Left = 8
+      Height = 24
+      Top = 3
+      Width = 67
+      DecimalPlaces = 1
+      Increment = 12.5
+      MaxValue = 1500
+      MinValue = 1
+      OnEditingDone = ScaleSpinChange
+      TabOrder = 0
+      Value = 100
+    end
+    object MousePosLabel: TLabel
+      Left = 647
+      Height = 12
+      Top = 15
+      Width = 84
+      Anchors = [akRight, akBottom]
+      AutoSize = False
+      ParentColor = False
+    end
+    object ScaleFullExtentBtn: TButton
+      Left = 80
+      Height = 23
+      Top = 3
+      Width = 75
+      Caption = 'Full extent'
+      OnClick = ScaleFullExtentBtnClick
+      TabOrder = 1
+    end
+  end
+  object MainMenu: TMainMenu
+    left = 65504
+    top = 65508
+    object FileSubmenu: TMenuItem
+      Caption = 'File'
+      object ExitItem: TMenuItem
+        Caption = 'Exit'
+        OnClick = ExitItemClick
+      end
+    end
+    object ObjManagerSubmenu: TMenuItem
+      Caption = 'Object manager'
+      object DelLastObjItem: TMenuItem
+        Caption = 'Delete last object'
+        OnClick = DelLastObjItemClick
+      end
+      object DelAllObjMenuItem: TMenuItem
+        Caption = 'Delete all'
+        OnClick = DelAllObjMenuItemClick
+      end
+    end
+    object ColorPaletteSubmenu: TMenuItem
+      Caption = 'Color palette'
+      object DefaultColorPaletteItem: TMenuItem
+        Caption = 'Set to default'
+        OnClick = DefaultColorPaletteItemClick
+      end
+      object AddColorColorPaletteItem: TMenuItem
+        Caption = 'Add color'
+        OnClick = AddColorColorPaletteItemClick
+      end
+    end
+    object HelpSubmenu: TMenuItem
+      Caption = 'Help'
+      object AboutItem: TMenuItem
+        Caption = 'About'
+        OnClick = AboutItemClick
+      end
+    end
+  end
+  object SelectColorDialog: TColorDialog
+    Height = 200
+    Color = clBlack
+    CustomColors.Strings = (
+      'ColorA=000000'
+      'ColorB=000080'
+      'ColorC=008000'
+      'ColorD=008080'
+      'ColorE=800000'
+      'ColorF=800080'
+      'ColorG=808000'
+      'ColorH=808080'
+      'ColorI=C0C0C0'
+      'ColorJ=0000FF'
+      'ColorK=00FF00'
+      'ColorL=00FFFF'
+      'ColorM=FF0000'
+      'ColorN=FF00FF'
+      'ColorO=FFFF00'
+      'ColorP=FFFFFF'
+      'ColorQ=C0DCC0'
+      'ColorR=F0CAA6'
+      'ColorS=F0FBFF'
+      'ColorT=A4A0A0'
+    )
+    top = 65504
+  end
+end
