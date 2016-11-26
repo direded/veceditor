@@ -103,6 +103,9 @@ type
 	TShapeTool = class(TDrawingTool)
   strict private                // WTF????? STRICT PRIVATE
     FParamFigure: (shfigEllipse, shfigRect);
+  strict protected
+    FPenParams: TPenParams;
+    FBrushParams: TBrushParams;
     const
       FParamFigureDisplayString: array[0..1] of String = ('Ellipse', 'Rect');
       FParamBrushStyleDisplayString: array[0..9] of String = ('Solid', 'Clear', 'Horizontal',
@@ -113,9 +116,6 @@ type
     procedure ParamPenWidthChange(Sender: TObject);
     procedure ParamPenStyleChange(Sender: TObject);
     procedure ParamBrushStyleChange(Sender: TObject);
-  strict protected
-    FPenParams: TPenParams;
-    FBrushParams: TBrushParams;
   public
     constructor Create;
     procedure SetParamColor(AFigureColors: TFigureColors); override;
@@ -129,9 +129,6 @@ type
     FFirstPoint: TDoublePoint;
     FParamAngleCount: Integer;
     procedure ParamAngleCountChange(Sender: TObject);
-    procedure ParamPenWidthChange(Sender: TObject);
-    procedure ParamPenStyleChange(Sender: TObject);
-    procedure ParamBrushStyleChange(Sender: TObject);
   public
     constructor Create;
     procedure SetParamsPanel(APanel: TPanel); override;
@@ -521,21 +518,6 @@ end;
 procedure TRegularPolygonTool.ParamAngleCountChange(Sender: TObject);
 begin
   FParamAngleCount:= TSpinEdit(Sender).Value;
-end;
-
-procedure TRegularPolygonTool.ParamPenWidthChange(Sender: TObject);
-begin
-  FPenParams.Width:= TSpinEdit(Sender).Value;
-end;
-
-procedure TRegularPolygonTool.ParamPenStyleChange(Sender: TObject);
-begin
-  FPenParams.Style:= TFPPenStyle(TComboBox(Sender).ItemIndex);
-end;
-
-procedure TRegularPolygonTool.ParamBrushStyleChange(Sender: TObject);
-begin
-  FBrushParams.Style:= TFPBrushStyle(TComboBox(Sender).ItemIndex);
 end;
 
 constructor TRegularPolygonTool.Create;
