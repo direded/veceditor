@@ -230,6 +230,7 @@ procedure TMainForm.ToolBtnClick(Sender: TObject);
 begin
   CurrentTool.Tool:= Tools[(Sender as TBitBtn).Tag];
   CurrentTool.Tool.SetParamsPanel(ToolParamsPanel);
+  CurrentTool.Tool.SetParamColor(CurrentTool.FigureColors);
 end;
 
 procedure TMainForm.DelLastObjItemClick(Sender: TObject);
