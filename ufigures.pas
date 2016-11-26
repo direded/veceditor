@@ -55,8 +55,6 @@ type
   end;
 
   TPolygonFigure = class(TShapeFigure)
-  strict private
-    FAngleCount: Integer;
   public
     constructor Create;
     function IsValid: Boolean; override;
