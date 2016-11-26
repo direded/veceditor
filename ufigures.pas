@@ -75,6 +75,13 @@ type
     procedure Draw(APaintSpace: TPaintSpace); override;
   end;
 
+  TRoundedRectFigure = class(TShapeFigure)
+  private
+    FRounding: Integer;
+	public
+    constructor Create;
+    procedure Draw(APaintSpace: TPaintSpace); override;
+  end;
 
   TFigures = class
  	strict private
@@ -249,6 +256,27 @@ begin
     SetParams(FPenParams, Canvas.Pen);
     SetParams(FBrushParams, Canvas.Brush);
     Canvas.Ellipse(ToLocal(FPoints[0]).X, ToLocal(FPoints[0]).Y, ToLocal(FPoints[1]).X, ToLocal(FPoints[1]).Y);
+    SetParams(CanvasPenParams, Canvas.Pen);
+    SetParams(CanvasBrushParams, Canvas.Brush);
+  end;
+end;
+
+constructor TRoundedRectFigure.Create;
+begin
+  inherited Create;
+end;
+
+procedure TRoundedRectFigure.Draw(APaintSpace: TPaintSpace);
+var
+  CanvasPenParams: TPenParams;
+  CanvasBrushParams: TBrushParams;
+begin
+  with APaintSpace do begin
+    CanvasPenParams:= GetParams(Canvas.Pen);
+    CanvasBrushParams:= GetParams(Canvas.Brush);
+    SetParams(FPenParams, Canvas.Pen);
+    SetParams(FBrushParams, Canvas.Brush);
+    Canvas.RoundRect(ToLocal(FPoints[0]).X, ToLocal(FPoints[0]).Y, ToLocal(FPoints[1]).X, ToLocal(FPoints[1]).Y, FRounding, FRounding);
     SetParams(CanvasPenParams, Canvas.Pen);
     SetParams(CanvasBrushParams, Canvas.Brush);
   end;
