@@ -77,6 +77,7 @@ type
   private
     FRounding: Integer;
 	public
+    property Rounding: Integer read FRounding write FRounding;
     constructor Create;
     procedure Draw(APaintSpace: TPaintSpace); override;
   end;
