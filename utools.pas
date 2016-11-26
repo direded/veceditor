@@ -136,6 +136,18 @@ type
     procedure MouseDown(APoint: TDoublePoint; AShift: TShiftState); override;
   end;
 
+  TRoundedRectTool = class(TShapeTool)
+  strict private
+    FFirstPoint: TDoublePoint;
+    FParamRounding: Integer;
+    procedure ParamRoundingChange(Sender: TObject);
+  public
+    constructor Create;
+    procedure SetParamsPanel(APanel: TPanel); override;
+    procedure MouseMove(APoint: TDoublePoint; AShift: TShiftState); override;
+    procedure MouseDown(APoint: TDoublePoint; AShift: TShiftState); override;
+  end;
+
 	procedure RegisterTool(ATool: TTool);
 
 var
@@ -523,7 +535,7 @@ end;
 constructor TRegularPolygonTool.Create;
 begin
   inherited Create;
-  FMetadata.Name:= 'Rect';
+  FMetadata.Name:= 'RegularPolygon';
   FMetadata.Bitmap.LoadFromFile('src/rect_tool.bmp');
   FParamAngleCount:= 3;
 end;
@@ -539,7 +551,7 @@ begin
   for i:= (APanel.ControlCount-1) downto 0 do
     APanel.Controls[i].Free;
 
-  Param:= CreateParamSpinEdit(APanel, 3, 15, FParamAngleCount, @ParamAngleCountChange);
+  Param:= CreateParamSpinEdit(APanel, 3, 1000000, FParamAngleCount, @ParamAngleCountChange);
   Param.Parent:= APanel;
   Param.Left:= Left;
   Param.Top:= Top;
@@ -588,12 +600,82 @@ begin
   end;
 end;
 
+procedure TRoundedRectTool.ParamRoundingChange(Sender: TObject);
+begin
+  FParamRounding:= TSpinEdit(Sender).Value;
+end;
+
+constructor TRoundedRectTool.Create;
+begin
+  inherited Create;
+  FMetadata.Name:= 'RoundedRect';
+  FMetadata.Bitmap.LoadFromFile('src/rect_tool.bmp');
+end;
+
+procedure TRoundedRectTool.SetParamsPanel(APanel: TPanel);
+var
+  Param: TWinControl;
+  TotalLeft, i: Integer;
+const
+  Left: Integer = 5;
+  Top: Integer = 8;
+begin
+  for i:= (APanel.ControlCount-1) downto 0 do
+    APanel.Controls[i].Free;
+
+  Param:= CreateParamSpinEdit(APanel, 0, 1000, FParamRounding, @ParamRoundingChange);
+  Param.Parent:= APanel;
+  Param.Left:= Left;
+  Param.Top:= Top;
+  TotalLeft:= Param.Left+Param.Width+Left;
+
+  Param:= CreateParamSpinEdit(APanel, 1, 100, FPenParams.Width, @ParamPenWidthChange);
+  Param.Parent:= APanel;
+  Param.Left:= TotalLeft;
+  Param.Top:= Top;
+  TotalLeft:= Param.Left+Param.Width+Left;
+
+  Param:= CreateParamComboBox(APanel, FParamPenStyleDisplayString, Integer(FPenParams.Style), @ParamPenStyleChange);
+  Param.Parent:= APanel;
+  Param.Left:= TotalLeft;
+  Param.Top:= Top;
+  TotalLeft:= Param.Left+Param.Width+Left;
+
+  Param:= CreateParamComboBox(APanel, FParamBrushStyleDisplayString, Integer(FBrushParams.Style), @ParamBrushStyleChange);
+  Param.Parent:= APanel;
+  Param.Left:= TotalLeft;
+  Param.Top:= Top;
+  TotalLeft:= Param.Left+Param.Width+Left;
+end;
+
+procedure TRoundedRectTool.MouseDown(APoint: TDoublePoint; AShift: TShiftState);
+begin
+  FFigure:= TRoundedRectFigure.Create;
+  FFigure.SetPointsLength(2);
+  FFigure.Points[0]:= APoint;
+  FFigure.Points[1]:= APoint;
+  FFirstPoint:= APoint;
+  TShapeFigure(FFigure).PenParams:= FPenParams;
+  TShapeFigure(FFigure).BrushParams:= FBrushParams;
+  TRoundedRectFigure(FFigure).Rounding:= FParamRounding;
+  FFigures.AddFigure(FFigure);
+end;
+
+procedure TRoundedRectTool.MouseMove(APoint: TDoublePoint; AShift: TShiftState);
+var
+  i: Integer;
+  vec: TDoublePoint;
+begin
+  FFigure.Points[1]:= APoint;
+end;
+
 initialization
   RegisterTool(TSelectTool.Create);
   RegisterTool(THandTool.Create);
   RegisterTool(TLineTool.Create);
   RegisterTool(TShapeTool.Create);
   RegisterTool(TRegularPolygonTool.Create);
+  RegisterTool(TRoundedRectTool.Create);
   RegisterTool(TZoomTool.Create);
 end.
 
