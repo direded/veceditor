@@ -19,15 +19,22 @@ type
   StringArray = array of String;
 
   TParamChangingEvent = procedure(Sender: TObject) of object;
+  TDrawItemEvent = procedure(Control: TWinControl; AIndex: Integer; ARect: TRect;
+    AState: TOwnerDrawState) of object;
 
 	TTool = class
   strict protected
     FMetadata: TToolMetadata;
     FFigures: TFigures;
     FPaintSpace: TPaintSpace;
-    function CreateParamComboBox(AOwner: TWinControl; AItems: array of String; AStartValue: Integer; AEvent: TParamChangingEvent): TComboBox;
-    function CreateParamSpinEdit(AOwner: TWinControl; AMin, AMax: Integer; AStartValue: Integer; AEvent: TParamChangingEvent): TSpinEdit;
-    function CreateParamFloatSpinEdit(AOwner: TWinControl; AMin, AMax: Double; AStartValue: Double; AEvent: TParamChangingEvent): TFloatSpinEdit;
+    function CreateParamComboBox(AOwner: TWinControl; AItems: array of String; AStartValue: Integer;
+      AEvent: TParamChangingEvent): TComboBox;
+    function CreateParamComboBox(AOwner: TWinControl; AItemCount: Integer; AStartValue: Integer; ADrawItemEvent: TDrawItemEvent;
+      AChangingEvent: TParamChangingEvent): TComboBox;
+    function CreateParamSpinEdit(AOwner: TWinControl; AMin, AMax: Integer; AStartValue: Integer;
+      AEvent: TParamChangingEvent): TSpinEdit;
+    function CreateParamFloatSpinEdit(AOwner: TWinControl; AMin, AMax: Double; AStartValue: Double;
+      AEvent: TParamChangingEvent): TFloatSpinEdit;
   public
     constructor Create;
     procedure SetParamColor(AFigureColors: TFigureColors); virtual;
@@ -86,9 +93,10 @@ type
   strict private
     FParamFigure: (lntlLine, lntlPen);
     FPenParams: TPenParams;
-    const FParamFigureDisplayString: array[0..1] of String = ('Line', 'Pen');
-    const FParamPenStyleDisplayString: array[0..7] of String = ('Solid', 'Dash',
-    'Dot', 'DashDot', 'DashDotDot', 'Inside Frame', 'Pattern', 'Clear');
+    const
+      FParamFigureDisplayString: array[0..1] of String = ('Line', 'Pen');
+    procedure ParamPenStyleComboBoxDrawItem(Control: TWinControl; AIndex: Integer; ARect: TRect;
+      AState: TOwnerDrawState);
     procedure ParamFigureChange(Sender: TObject);
     procedure ParamPenWidthChange(Sender: TObject);
     procedure ParamPenStyleChange(Sender: TObject);
@@ -108,10 +116,10 @@ type
     FBrushParams: TBrushParams;
     const
       FParamFigureDisplayString: array[0..1] of String = ('Ellipse', 'Rect');
-      FParamBrushStyleDisplayString: array[0..9] of String = ('Solid', 'Clear', 'Horizontal',
-        'Vertical', 'FDiagonal', 'BDiagonal', 'Cross', 'Diagonal cross', 'Image', 'Pattern');
-      FParamPenStyleDisplayString: array[0..7] of String = ('Solid', 'Dash',
-        'Dot', 'DashDot', 'DashDotDot', 'Inside Frame', 'Pattern', 'No border');
+    procedure ParamPenStyleComboBoxDrawItem(Control: TWinControl; AIndex: Integer; ARect: TRect;
+      AState: TOwnerDrawState);
+    procedure ParamBrushStyleComboBoxDrawItem(Control: TWinControl; AIndex: Integer; ARect: TRect;
+          AState: TOwnerDrawState);
     procedure ParamFigureChange(Sender: TObject);
     procedure ParamPenWidthChange(Sender: TObject);
     procedure ParamPenStyleChange(Sender: TObject);
@@ -161,7 +169,23 @@ begin
   Tools[High(Tools)]:= ATool;
 end;
 
-function TTool.CreateParamComboBox(AOwner: TWinControl; AItems: array of String; AStartValue: Integer; AEvent: TParamChangingEvent): TComboBox;
+function TTool.CreateParamComboBox(AOwner: TWinControl; AItemCount: Integer; AStartValue: Integer; ADrawItemEvent: TDrawItemEvent;
+  AChangingEvent: TParamChangingEvent): TComboBox;
+var i:Integer;
+begin
+  Result:= TComboBox.Create(AOwner);
+  Result.Width:= 80;
+  Result.ReadOnly:= true;
+  for i:= 0 to AItemCount-1 do
+    Result.Items.Add('');
+  Result.ItemIndex:= AStartValue;
+  Result.Style:= csOwnerDrawFixed;
+  Result.OnChange:= AChangingEvent;
+  Result.OnDrawItem:= ADrawItemEvent;
+end;
+
+function TTool.CreateParamComboBox(AOwner: TWinControl; AItems: array of String; AStartValue: Integer;
+  AEvent: TParamChangingEvent): TComboBox;
 var
   str: String;
 begin
@@ -175,7 +199,8 @@ begin
   Result.OnChange:= AEvent;
 end;
 
-function TTool.CreateParamFloatSpinEdit(AOwner: TWinControl; AMin, AMax: Double; AStartValue: Double; AEvent: TParamChangingEvent): TFloatSpinEdit;
+function TTool.CreateParamFloatSpinEdit(AOwner: TWinControl; AMin, AMax: Double; AStartValue: Double;
+  AEvent: TParamChangingEvent): TFloatSpinEdit;
 begin
   Result:= TFloatSpinEdit.Create(AOwner);
   Result.Width:= 85;
@@ -185,7 +210,8 @@ begin
   Result.MinValue:= AMin;
 end;
 
-function TTool.CreateParamSpinEdit(AOwner: TWinControl; AMin, AMax: Integer; AStartValue: Integer; AEvent: TParamChangingEvent): TSpinEdit;
+function TTool.CreateParamSpinEdit(AOwner: TWinControl; AMin, AMax: Integer; AStartValue: Integer;
+  AEvent: TParamChangingEvent): TSpinEdit;
 begin
   Result:= TSpinEdit.Create(AOwner);
   Result.Width:= 50;
@@ -366,6 +392,19 @@ begin
   end;
 end;
 
+procedure TLineTool.ParamPenStyleComboBoxDrawItem(Control: TWinControl; AIndex: Integer; ARect: TRect;
+  AState: TOwnerDrawState);
+begin
+  case AIndex of
+    0 : TComboBox(Control).Canvas.Pen.Style:= psSolid;
+    1 : TComboBox(Control).Canvas.Pen.Style:= psDash;
+    2 : TComboBox(Control).Canvas.Pen.Style:= psDot;
+    3 : TComboBox(Control).Canvas.Pen.Style:= psDashDot;
+    4 : TComboBox(Control).Canvas.Pen.Style:= psDashDotDot;
+  end;
+  TComboBox(Control).Canvas.Line(ARect.Left+7, ARect.Bottom div 2+1, ARect.Right-7, ARect.Bottom div 2+1);
+end;
+
 procedure TLineTool.ParamPenWidthChange(Sender: TObject);
 begin
   FPenParams.Width:= TSpinEdit(Sender).Value;
@@ -403,7 +442,8 @@ begin
   Param.Top:= Top;
   TotalLeft:= Param.Width + Param.Left + Left;
 
-  Param:= CreateParamComboBox(APanel, FParamPenStyleDisplayString, Integer(FPenParams.Style), @ParamPenStyleChange);
+  Param:= CreateParamComboBox(APanel, 8, Integer(FPenParams.Style), @ParamPenStyleComboBoxDrawItem,
+    @ParamPenStyleChange);
   Param.Parent:= APanel;
   Param.Left:= TotalLeft;
   Param.Top:= Top;
@@ -435,6 +475,43 @@ begin
       FFigure.Points[1]:= APoint;
     end
   end;
+end;
+
+procedure TShapeTool.ParamPenStyleComboBoxDrawItem(Control: TWinControl; AIndex: Integer; ARect: TRect;
+  AState: TOwnerDrawState);
+begin
+  case AIndex of
+    0 : TComboBox(Control).Canvas.Pen.Style:= psSolid;
+    1 : TComboBox(Control).Canvas.Pen.Style:= psDash;
+    2 : TComboBox(Control).Canvas.Pen.Style:= psDot;
+    3 : TComboBox(Control).Canvas.Pen.Style:= psDashDot;
+    4 : TComboBox(Control).Canvas.Pen.Style:= psDashDotDot;
+  end;
+  TComboBox(Control).Canvas.Line(ARect.Left+7, ARect.Bottom div 2+1, ARect.Right-7, ARect.Bottom div 2+1);
+end;
+
+procedure TShapeTool.ParamBrushStyleComboBoxDrawItem(Control: TWinControl; AIndex: Integer; ARect: TRect;
+  AState: TOwnerDrawState);
+var
+  rect: TRect;
+begin
+  rect.Left:= ARect.Left+8;
+  rect.Right:= ARect.Right-8;
+  rect.Top:= ARect.Top+4;
+  rect.Bottom:= ARect.Bottom-3;
+  case AIndex of
+    0 : TComboBox(Control).Canvas.Brush.Style:= bsSolid;
+    1 : TComboBox(Control).Canvas.Brush.Style:= bsClear;
+    2 : TComboBox(Control).Canvas.Brush.Style:= bsHorizontal;
+    3 : TComboBox(Control).Canvas.Brush.Style:= bsVertical;
+    4 : TComboBox(Control).Canvas.Brush.Style:= bsFDiagonal;
+    5 : TComboBox(Control).Canvas.Brush.Style:= bsBDiagonal;
+    6 : TComboBox(Control).Canvas.Brush.Style:= bsCross;
+    7 : TComboBox(Control).Canvas.Brush.Style:= bsDiagCross;
+  end;
+  TComboBox(Control).Canvas.Pen.Color:= clGray;
+  TComboBox(Control).Canvas.Brush.Color:= clGray;
+  TComboBox(Control).Canvas.Rectangle(rect);
 end;
 
 procedure TShapeTool.ParamFigureChange(Sender: TObject);
@@ -494,13 +571,13 @@ begin
   Param.Top:= Top;
   TotalLeft:= Param.Left+Param.Width+Left;
 
-  Param:= CreateParamComboBox(APanel, FParamPenStyleDisplayString, Integer(FPenParams.Style), @ParamPenStyleChange);
+  Param:= CreateParamComboBox(APanel, 4, Integer(FPenParams.Style), @ParamPenStyleComboBoxDrawItem, @ParamPenStyleChange);
   Param.Parent:= APanel;
   Param.Left:= TotalLeft;
   Param.Top:= Top;
   TotalLeft:= Param.Left+Param.Width+Left;
 
-  Param:= CreateParamComboBox(APanel, FParamBrushStyleDisplayString, Integer(FBrushParams.Style), @ParamBrushStyleChange);
+  Param:= CreateParamComboBox(APanel, 8, Integer(FBrushParams.Style), @ParamBrushStyleComboBoxDrawItem, @ParamBrushStyleChange);
   Param.Parent:= APanel;
   Param.Left:= TotalLeft;
   Param.Top:= Top;
@@ -563,13 +640,13 @@ begin
   Param.Top:= Top;
   TotalLeft:= Param.Left+Param.Width+Left;
 
-  Param:= CreateParamComboBox(APanel, FParamPenStyleDisplayString, Integer(FPenParams.Style), @ParamPenStyleChange);
+  Param:= CreateParamComboBox(APanel, 4, Integer(FPenParams.Style), @ParamPenStyleComboBoxDrawItem, @ParamPenStyleChange);
   Param.Parent:= APanel;
   Param.Left:= TotalLeft;
   Param.Top:= Top;
   TotalLeft:= Param.Left+Param.Width+Left;
 
-  Param:= CreateParamComboBox(APanel, FParamBrushStyleDisplayString, Integer(FBrushParams.Style), @ParamBrushStyleChange);
+  Param:= CreateParamComboBox(APanel, 8, Integer(FBrushParams.Style), @ParamBrushStyleComboBoxDrawItem, @ParamBrushStyleChange);
   Param.Parent:= APanel;
   Param.Left:= TotalLeft;
   Param.Top:= Top;
@@ -635,13 +712,13 @@ begin
   Param.Top:= Top;
   TotalLeft:= Param.Left+Param.Width+Left;
 
-  Param:= CreateParamComboBox(APanel, FParamPenStyleDisplayString, Integer(FPenParams.Style), @ParamPenStyleChange);
+  Param:= CreateParamComboBox(APanel, 4, Integer(FPenParams.Style), @ParamPenStyleComboBoxDrawItem, @ParamPenStyleChange);
   Param.Parent:= APanel;
   Param.Left:= TotalLeft;
   Param.Top:= Top;
   TotalLeft:= Param.Left+Param.Width+Left;
 
-  Param:= CreateParamComboBox(APanel, FParamBrushStyleDisplayString, Integer(FBrushParams.Style), @ParamBrushStyleChange);
+  Param:= CreateParamComboBox(APanel, 8, Integer(FBrushParams.Style), @ParamBrushStyleComboBoxDrawItem, @ParamBrushStyleChange);
   Param.Parent:= APanel;
   Param.Left:= TotalLeft;
   Param.Top:= Top;
