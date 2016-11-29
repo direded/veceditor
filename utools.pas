@@ -540,8 +540,8 @@ end;
 constructor TShapeTool.Create;
 begin
   inherited Create;
-  FMetadata.Name:= 'Rect';
-  FMetadata.Bitmap.LoadFromFile('src/rect_tool.bmp');
+  FMetadata.Name:= 'Shape';
+  FMetadata.Bitmap.LoadFromFile('src/shape_tool.bmp');
 end;
 
 procedure TShapeTool.SetParamColor(AFigureColors: TFigureColors);
@@ -613,7 +613,7 @@ constructor TRegularPolygonTool.Create;
 begin
   inherited Create;
   FMetadata.Name:= 'RegularPolygon';
-  FMetadata.Bitmap.LoadFromFile('src/rect_tool.bmp');
+  FMetadata.Bitmap.LoadFromFile('src/regular_tool.bmp');
   FParamAngleCount:= 3;
 end;
 
