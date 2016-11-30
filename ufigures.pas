@@ -19,7 +19,6 @@ type
   public
     property Points: TDoublePointArray read FPoints write FPoints;
     property Bounds: TTwoDoublePointsArray read FBounds;
-    constructor Create;
     function IsValid: Boolean; virtual; abstract;
     procedure SetPointsLength(ALength: Integer);
     procedure IncreasePointsLength;
@@ -116,10 +115,6 @@ begin
     ABounds[1].Y:= APoint.Y;
 end;
 
-constructor TFigure.Create;
-begin
-end;
-
 procedure TFigure.IncreasePointsLength;
 begin
   SetLength(FPoints, Length(FPoints)+1);
@@ -142,7 +137,7 @@ end;
 
 constructor TLineFigure.Create;
 begin
-  inherited Create;
+  SetLength(FPoints, 2);
 end;
 
 function TLineFigure.IsValid: Boolean;
@@ -151,17 +146,10 @@ begin
 end;
 
 procedure TLineFigure.Draw(APaintSpace: TPaintSpace);
-var
-  P: TDoublePoint;
-  CanvasPenParams: TPenParams;
 begin
   with APaintSpace do begin
-    CanvasPenParams:= GetParams(Canvas.Pen);
     SetParams(FPenParams, Canvas.Pen);
-  	Canvas.MoveTo(ToLocal(FPoints[0]));
-		for P in FPoints do
-  		Canvas.LineTo(ToLocal(P));
-    SetParams(CanvasPenParams, Canvas.Pen);
+  	Canvas.Polyline(ToLocal(FPoints));
   end;
 end;
 
@@ -181,24 +169,17 @@ begin
 end;
 
 procedure TRectFigure.Draw(APaintSpace: TPaintSpace);
-var
-  CanvasPenParams: TPenParams;
-  CanvasBrushParams: TBrushParams;
 begin
   with APaintSpace do begin
-    CanvasPenParams:= GetParams(Canvas.Pen);
-    CanvasBrushParams:= GetParams(Canvas.Brush);
     SetParams(FPenParams, Canvas.Pen);
     SetParams(FBrushParams, Canvas.Brush);
-    Canvas.Rectangle(ToLocal(FPoints[0]).X, ToLocal(FPoints[0]).Y, ToLocal(FPoints[1]).X, ToLocal(FPoints[1]).Y);
-    SetParams(CanvasPenParams, Canvas.Pen);
-    SetParams(CanvasBrushParams, Canvas.Brush);
+    Canvas.Rectangle(ToLocal(FPoints[0]).X, ToLocal(FPoints[0]).Y,
+                     ToLocal(FPoints[1]).X, ToLocal(FPoints[1]).Y);
   end;
 end;
 
 constructor TPolygonFigure.Create;
 begin
-  inherited Create;
 end;
 
 function TPolygonFigure.IsValid: Boolean;
@@ -207,18 +188,11 @@ begin
 end;
 
 procedure TPolygonFigure.Draw(APaintSpace: TPaintSpace);
-var
-  CanvasPenParams: TPenParams;
-  CanvasBrushParams: TBrushParams;
 begin
   with APaintSpace do begin
-    CanvasPenParams:= GetParams(Canvas.Pen);
-    CanvasBrushParams:= GetParams(Canvas.Brush);
     SetParams(FPenParams, Canvas.Pen);
     SetParams(FBrushParams, Canvas.Brush);
     Canvas.Polygon(ToLocal(Points));
-    SetParams(CanvasPenParams, Canvas.Pen);
-    SetParams(CanvasBrushParams, Canvas.Brush);
   end;
 end;
 
@@ -228,14 +202,11 @@ begin
 end;
 
 procedure TRectSplitOffFigure.Draw(APaintSpace: TPaintSpace);
-var
-  lastPenStyle: TFPPenStyle;
 begin
   with APaintSpace do begin
-    lastPenStyle:= Canvas.Pen.Style;
     Canvas.Pen.Style:=psDash;
-    Canvas.Frame(ToLocal(FPoints[0]).X, ToLocal(FPoints[0]).Y, ToLocal(FPoints[1]).X, ToLocal(FPoints[1]).Y);
-    Canvas.Pen.Style:= lastPenStyle;
+    Canvas.Frame(ToLocal(FPoints[0]).X, ToLocal(FPoints[0]).Y,
+                 ToLocal(FPoints[1]).X, ToLocal(FPoints[1]).Y);
   end;
 end;
 
@@ -245,18 +216,12 @@ begin
 end;
 
 procedure TEllipseFigure.Draw(APaintSpace: TPaintSpace);
-var
-  CanvasPenParams: TPenParams;
-  CanvasBrushParams: TBrushParams;
 begin
   with APaintSpace do begin
-    CanvasPenParams:= GetParams(Canvas.Pen);
-    CanvasBrushParams:= GetParams(Canvas.Brush);
     SetParams(FPenParams, Canvas.Pen);
     SetParams(FBrushParams, Canvas.Brush);
-    Canvas.Ellipse(ToLocal(FPoints[0]).X, ToLocal(FPoints[0]).Y, ToLocal(FPoints[1]).X, ToLocal(FPoints[1]).Y);
-    SetParams(CanvasPenParams, Canvas.Pen);
-    SetParams(CanvasBrushParams, Canvas.Brush);
+    Canvas.Ellipse(ToLocal(FPoints[0]).X, ToLocal(FPoints[0]).Y,
+                   ToLocal(FPoints[1]).X, ToLocal(FPoints[1]).Y);
   end;
 end;
 
@@ -266,18 +231,13 @@ begin
 end;
 
 procedure TRoundedRectFigure.Draw(APaintSpace: TPaintSpace);
-var
-  CanvasPenParams: TPenParams;
-  CanvasBrushParams: TBrushParams;
 begin
   with APaintSpace do begin
-    CanvasPenParams:= GetParams(Canvas.Pen);
-    CanvasBrushParams:= GetParams(Canvas.Brush);
     SetParams(FPenParams, Canvas.Pen);
     SetParams(FBrushParams, Canvas.Brush);
-    Canvas.RoundRect(ToLocal(FPoints[0]).X, ToLocal(FPoints[0]).Y, ToLocal(FPoints[1]).X, ToLocal(FPoints[1]).Y, FRounding, FRounding);
-    SetParams(CanvasPenParams, Canvas.Pen);
-    SetParams(CanvasBrushParams, Canvas.Brush);
+    Canvas.RoundRect(ToLocal(FPoints[0]).X, ToLocal(FPoints[0]).Y,
+                     ToLocal(FPoints[1]).X, ToLocal(FPoints[1]).Y,
+                     FRounding, FRounding);
   end;
 end;
 
