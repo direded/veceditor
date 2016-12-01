@@ -43,13 +43,8 @@ type
 
   TZoomTool = class(TTool)
   strict private
-    FParamMode: (zmtlZoomIn, zmtlZoomOut, zmtlZoomSpace);
-    FParamZoomPerClick: Double;
     FFirstPoint: TDoublePoint;
     FSplitOff: TRectSplitOffFigure;
-    const FParamModeDisplayString: array[0..2] of String = ('Zoom in', 'Zoom out', 'Zoom space');
-    procedure ParamModeChange(Sender: TObject);
-    procedure ParamZoomPerClickChange(Sender: TObject);
   public
     constructor Create;
     procedure SetParamsPanel(APanel: TPanel); override;
@@ -218,42 +213,24 @@ begin
 
 end;
 
-procedure TZoomTool.ParamModeChange(Sender: TObject);
-begin
-  case TComboBox(Sender).ItemIndex of
-    0 : FParamMode:= zmtlZoomIn;
-    1 : FParamMode:= zmtlZoomOut;
-    2 : FParamMode:= zmtlZoomSpace;
-  end;
-end;
-
-procedure TZoomTool.ParamZoomPerClickChange(Sender: TObject);
-begin
-  FParamZoomPerClick:= TFloatSpinEdit(Sender).Value;
-end;
-
 constructor TZoomTool.Create;
 begin
   inherited Create;
+  FParams:= TZoomToolParameters.Create;
   FMetadata.Name:= 'Zoom';
   FMetadata.Bitmap.LoadFromFile('src/zoom_tool.bmp');
   FFirstPoint:= GetDoublePoint;
-  FParamMode:= zmtlZoomIn;
-  FParamZoomPerClick:= 0.25;
 end;
 
 procedure TZoomTool.SetParamsPanel(APanel: TPanel);
 begin
-  {TotalLeft:= Left;
-  Param:= CreateParamFloatSpinEdit(APanel, Point(TotalLeft, Top), 0.10, 2, FParamZoomPerClick, @ParamZoomPerClickChange);
-  TotalLeft:= TotalLeft + Param.Width + Left;
-  Param:= CreateParamComboBox(APanel, Point(TotalLeft, Top), FParamModeDisplayString, Integer(FParamMode), @ParamModeChange);
-}end;
+  FParams.FillUserInterface(APanel);
+end;
 
 procedure TZoomTool.MouseDown(APoint: TDoublePoint; AShift: TShiftState);
 begin
   FFirstPoint:= APoint;
-  if FParamMode = zmtlZoomSpace then begin
+  if TZoomToolParameters(FParams).Mode = zmtlZoomSpace then begin
     FSplitOff:= TRectSplitOffFigure.Create;
     FSplitOff.SetPointsLength(2);
     FSplitOff.Points[0]:= APoint;
@@ -263,7 +240,7 @@ end;
 
 procedure TZoomTool.MouseMove(APoint: TDoublePoint; AShift: TShiftState);
 begin
-  if FParamMode = zmtlZoomSpace then begin
+  if TZoomToolParameters(FParams).Mode = zmtlZoomSpace then begin
     FSplitOff.Points[1]:= APoint;
   end;
 end;
@@ -271,9 +248,10 @@ end;
 procedure TZoomTool.MouseUp(APoint: TDoublePoint; AShift: TShiftState);
 begin
   if ssRight in AShift then exit;
-  case FParamMode of
-    zmtlZoomOut : FPaintSpace.SetScalePoint(FPaintSpace.Scale-FParamZoomPerClick, APoint);
-    zmtlZoomIn : FPaintSpace.SetScalePoint(FPaintSpace.Scale+FParamZoomPerClick, APoint);
+  with TZoomToolParameters(FParams) do
+  case Mode of
+    zmtlZoomOut : FPaintSpace.SetScalePoint(FPaintSpace.Scale-ZoomPerClick, APoint);
+    zmtlZoomIn : FPaintSpace.SetScalePoint(FPaintSpace.Scale+ZoomPerClick, APoint);
     zmtlZoomSpace : begin
       if abs(FFirstPoint.X-APoint.X) > abs(FFirstPoint.Y-APoint.Y) then
         FPaintSpace.Scale:= FPaintSpace.PaintBox.Width/abs(FFirstPoint.X-APoint.X)

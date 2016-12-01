@@ -33,6 +33,22 @@ type
     procedure FillUserInterface(AControl: TWinControl); virtual; abstract;
   end;
 
+  TZoomToolParameters = class(TToolParameters)
+  strict protected
+  type
+    TZoomModes = (zmtlZoomIn, zmtlZoomOut, zmtlZoomSpace);
+  var
+    FMode: TZoomModes;
+    FZoomPerClick: Double;
+    procedure FModeChange(Sender: TObject);
+    procedure FZoomPerClickChange(Sender: TObject);
+  public
+    constructor Create;
+    property Mode: TZoomModes read FMode write FMode;
+    property ZoomPerClick: Double read FZoomPerClick write FZoomPerClick;
+    procedure FillUserInterface(AControl: TWinControl); override;
+  end;
+
   TLineToolParameters = class(TToolParameters)
   strict protected
     FPen: TPenParams;
@@ -167,6 +183,35 @@ begin
   UISettings.Top:= ATop;
 end;
 
+procedure TZoomToolParameters.FModeChange(Sender: TObject);
+begin
+  FMode:= TZoomModes(TComboBox(Sender).ItemIndex);
+end;
+
+procedure TZoomToolParameters.FZoomPerClickChange(Sender: TObject);
+begin
+  FZoomPerClick:= TFloatSpinEdit(Sender).Value;
+end;
+
+constructor TZoomToolParameters.Create;
+begin
+  inherited Create;
+  FZoomPerClick:= 0.25;
+end;
+
+procedure TZoomToolParameters.FillUserInterface(AControl: TWinControl);
+const
+  ZoomModes: array[0..2] of String = ('Zoom in', 'Zoom out', 'Zoom space');
+var
+  TotalLeft: Integer;
+  Param: TWinControl;
+begin
+  TotalLeft:= UISettings.Left;
+  Param:= CreateComboBox(AControl, Point(TotalLeft, UISettings.Top), ZoomModes, Integer(FMode), @FModeChange);
+  TotalLeft:= TotalLeft + Param.Width + UISettings.Left;
+  Param:= CreateFloatSpinEdit(AControl, Point(TotalLeft, UISettings.Top), 0.1, 2, FZoomPerClick, @FZoomPerClickChange);
+end;
+
 procedure TLineToolParameters.FPenStyleChange(Sender: TObject);
 begin
   FPen.Style:= TFPPenStyle(TComboBox(Sender).ItemIndex);
@@ -195,14 +240,13 @@ end;
 
 procedure TLineToolParameters.FillUserInterface(AControl: TWinControl);
 var
-  TotalLeft, Top: Integer;
+  TotalLeft: Integer;
   Param: TWinControl;
 begin
   TotalLeft:= UISettings.Left;
-  Top:= UISettings.Top;
-  Param:= CreateSpinEdit(AControl, Point(TotalLeft, Top), 1, 100, FPen.Width, @FPenWidthChange);
+  Param:= CreateSpinEdit(AControl, Point(TotalLeft, UISettings.Top), 1, 100, FPen.Width, @FPenWidthChange);
   TotalLeft:= TotalLeft + Param.Width + UISettings.Left;
-  Param:= CreateComboBox(AControl, Point(TotalLeft, Top), 5, Integer(FPen.Style), @FPenStyleComboBoxDrawItem,
+  Param:= CreateComboBox(AControl, Point(TotalLeft, UISettings.Top), 5, Integer(FPen.Style), @FPenStyleComboBoxDrawItem,
     @FPenStyleChange);
 end;
 
