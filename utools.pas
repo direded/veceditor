@@ -6,7 +6,7 @@ interface
 uses
 	Classes, SysUtils, Controls, FileUtil, Forms, Graphics, Dialogs, Menus,
   ExtCtrls, Spin, StdCtrls, FPCanvas, UFigures, UDoublePoint, UPaintSpace, Math,
-  UFigureParams, UUtils;
+  UFigureParams, UUtils, UToolParams;
 
 type
 
@@ -24,17 +24,10 @@ type
 
 	TTool = class
   strict protected
+    FParams: TToolParameters;
     FMetadata: TToolMetadata;
     FFigures: TFigures;
     FPaintSpace: TPaintSpace;
-    class function CreateParamComboBox(AOwner: TWinControl; APoint: TPoint; AItems: array of String; AStartValue: Integer;
-      AEvent: TParamChangingEvent): TComboBox;
-    class function CreateParamComboBox(AOwner: TWinControl; APoint: TPoint; AItemCount: Integer; AStartValue: Integer;
-      ADrawItemEvent: TDrawItemEvent; AChangingEvent: TParamChangingEvent): TComboBox;
-    class function CreateParamSpinEdit(AOwner: TWinControl; APoint: TPoint; AMin, AMax: Integer; AStartValue: Integer;
-      AEvent: TParamChangingEvent): TSpinEdit;
-    class function CreateParamFloatSpinEdit(AOwner: TWinControl; APoint: TPoint; AMin, AMax: Double; AStartValue: Double;
-      AEvent: TParamChangingEvent): TFloatSpinEdit;
   public
     constructor Create;
     property Figures: TFigures read FFigures write FFigures;
@@ -89,23 +82,16 @@ type
     procedure Finish;
     procedure CreateFigure; virtual; abstract;
     procedure InitializeFigure(APoint: TDoublePoint); virtual; abstract;
-    procedure ParamPenStyleComboBoxDrawItem(Control: TWinControl; AIndex: Integer; ARect: TRect;
-      AState: TOwnerDrawState);
+    procedure SetFigureParams; virtual; abstract;
   public
   	procedure MouseUp(APoint:TDoublePoint; AShift: TShiftState); override;
   end;
 
 	TLineTool = class(TDrawingTool)
-  strict private
-    FParamFigure: (lntlLine, lntlPen);
-    FPenParams: TPenParams;
-    procedure ParamFigureChange(Sender: TObject);
-    procedure ParamPenWidthChange(Sender: TObject);
-    procedure ParamPenStyleChange(Sender: TObject);
+  strict protected
     procedure CreateFigure; override;
     procedure InitializeFigure(APoint: TDoublePoint); override;
-    const
-      FParamFigureDisplayString: array[0..1] of String = ('Line', 'Pen');
+    procedure SetFigureParams; override;
   public
     constructor Create;
     procedure SetParamColor(AFigureColors: TFigureColors); override;
@@ -115,21 +101,10 @@ type
 	end;
 
 	TShapeTool = class(TDrawingTool)
-  strict private                // WTF????? STRICT PRIVATE
-    FParamFigure: (shfigEllipse, shfigRect);
   strict protected
-    FPenParams: TPenParams;
-    FBrushParams: TBrushParams;
-    procedure ParamBrushStyleComboBoxDrawItem(Control: TWinControl; AIndex: Integer; ARect: TRect;
-      AState: TOwnerDrawState);
-    procedure ParamFigureChange(Sender: TObject);
-    procedure ParamPenWidthChange(Sender: TObject);
-    procedure ParamPenStyleChange(Sender: TObject);
-    procedure ParamBrushStyleChange(Sender: TObject);
     procedure CreateFigure; override;
     procedure InitializeFigure(APoint: TDoublePoint); override;
-    const
-      FParamFigureDisplayString: array[0..1] of String = ('Ellipse', 'Rect');
+    procedure SetFigureParams; override;
   public
     constructor Create;
     procedure SetParamColor(AFigureColors: TFigureColors); override;
@@ -141,10 +116,10 @@ type
   TRegularPolygonTool = class(TShapeTool)
   strict private
     FFirstPoint: TDoublePoint;
-    FParamAngleCount: Integer;
-    procedure ParamAngleCountChange(Sender: TObject);
+  strict protected
     procedure CreateFigure; override;
     procedure InitializeFigure(APoint: TDoublePoint); override;
+    procedure SetFigureParams; override;
   public
     constructor Create;
     procedure SetParamsPanel(APanel: TPanel); override;
@@ -153,12 +128,10 @@ type
   end;
 
   TRoundedRectTool = class(TShapeTool)
-  strict private
-    FFirstPoint: TDoublePoint;
-    FParamRounding: Integer;
-    procedure ParamRoundingChange(Sender: TObject);
+  strict protected
     procedure CreateFigure; override;
     procedure InitializeFigure(APoint: TDoublePoint); override;
+    procedure SetFigureParams; override;
   public
     constructor Create;
     procedure SetParamsPanel(APanel: TPanel); override;
@@ -177,79 +150,6 @@ procedure RegisterTool(ATool: TTool);
 begin
 	SetLength(Tools, Length(Tools)+1);
   Tools[High(Tools)]:= ATool;
-end;
-
-class function TTool.CreateParamComboBox(AOwner: TWinControl; APoint: TPoint; AItemCount: Integer; AStartValue: Integer;
-  ADrawItemEvent: TDrawItemEvent; AChangingEvent: TParamChangingEvent): TComboBox;
-var i:Integer;
-begin
-  if AItemCount <= 0 then Exit;
-  Result:= TComboBox.Create(AOwner);
-  with Result do begin
-    Left:= APoint.X;
-    Top:= APoint.Y;
-    Parent:= AOwner;
-    Width:= 80;
-    ReadOnly:= true;
-    for i:= 0 to AItemCount-1 do
-      Items.Add('');
-    ItemIndex:= AStartValue;
-    Style:= csOwnerDrawFixed;
-    OnChange:= AChangingEvent;
-    OnDrawItem:= ADrawItemEvent;
-  end;
-end;
-
-class function TTool.CreateParamComboBox(AOwner: TWinControl; APoint: TPoint; AItems: array of String; AStartValue: Integer;
-  AEvent: TParamChangingEvent): TComboBox;
-var
-  str: String;
-begin
-  if Length(AItems) = 0 then Exit;
-  Result:= TComboBox.Create(AOwner);
-  with Result do begin
-    Left:= APoint.X;
-    Top:= APoint.Y;
-    Parent:= AOwner;
-    Width:= 80;
-    ReadOnly:= true;
-    for str in AItems do
-      Items.Add(str);
-    ItemIndex:= AStartValue;
-    OnChange:= AEvent;
-  end;
-end;
-
-class function TTool.CreateParamFloatSpinEdit(AOwner: TWinControl; APoint: TPoint; AMin, AMax: Double; AStartValue: Double;
-  AEvent: TParamChangingEvent): TFloatSpinEdit;
-begin
-  Result:= TFloatSpinEdit.Create(AOwner);
-  with Result do begin
-    Left:= APoint.X;
-    Top:= APoint.Y;
-    Parent:= AOwner;
-    Width:= 85;
-    OnChange:= AEvent;
-    Value:= AStartValue;
-    MaxValue:= AMax;
-    MinValue:= AMin;
-  end;
-end;
-
-class function TTool.CreateParamSpinEdit(AOwner: TWinControl; APoint: TPoint; AMin, AMax: Integer; AStartValue: Integer;
-  AEvent: TParamChangingEvent): TSpinEdit;
-begin
-  Result:= TSpinEdit.Create(AOwner);
-  with Result do begin
-    Left:= APoint.X;
-    Top:= APoint.Y;
-    Parent:= AOwner;
-    Width:= 50;
-    OnChange:= AEvent;
-    Value:= AStartValue;
-    MaxValue:= AMax;
-    MinValue:= AMin;
-  end;
 end;
 
 constructor TTool.Create;
@@ -343,18 +243,12 @@ begin
 end;
 
 procedure TZoomTool.SetParamsPanel(APanel: TPanel);
-var
-  TotalLeft: Integer;
-  Param: TWinControl;
-const
-  Left = 5;
-  Top = 8;
 begin
-  TotalLeft:= Left;
+  {TotalLeft:= Left;
   Param:= CreateParamFloatSpinEdit(APanel, Point(TotalLeft, Top), 0.10, 2, FParamZoomPerClick, @ParamZoomPerClickChange);
   TotalLeft:= TotalLeft + Param.Width + Left;
   Param:= CreateParamComboBox(APanel, Point(TotalLeft, Top), FParamModeDisplayString, Integer(FParamMode), @ParamModeChange);
-end;
+}end;
 
 procedure TZoomTool.MouseDown(APoint: TDoublePoint; AShift: TShiftState);
 begin
@@ -403,16 +297,6 @@ begin
     FFigures.RemoveLastFigure;
 end;
 
-procedure TDrawingTool.ParamPenStyleComboBoxDrawItem(Control: TWinControl; AIndex: Integer; ARect: TRect;
-  AState: TOwnerDrawState);
-const
-  PenStyles: array[0..4] of TFPPenStyle = (psSolid, psDash, psDot, psDashDot, psDashDotDot);
-begin
-  if not AIndex in [Low(PenStyles)..High(PenStyles)] then Exit;
-  TComboBox(Control).Canvas.Pen.Style:= PenStyles[AIndex];
-  TComboBox(Control).Canvas.Line(ARect.Left+7, ARect.Bottom div 2+1, ARect.Right-7, ARect.Bottom div 2+1);
-end;
-
 procedure TDrawingTool.MouseUp(APoint: TDoublePoint; AShift: TShiftState);
 begin
   Finish;
@@ -421,28 +305,9 @@ end;
 constructor TLineTool.Create;
 begin
   inherited Create;
+  FParams:= TLineToolParameters.Create;
   FMetadata.Name:= 'Line';
   FMetadata.Bitmap.LoadFromFile('src/line_tool.bmp');
-  FPenParams.Width:= 1;
-  FParamFigure:= lntlLine;
-end;
-
-procedure TLineTool.ParamFigureChange(Sender: TObject);
-begin
-  case TComboBox(Sender).ItemIndex of
-    0 : FParamFigure:= lntlLine;
-    1 : FParamFigure:= lntlPen;
-  end;
-end;
-
-procedure TLineTool.ParamPenWidthChange(Sender: TObject);
-begin
-  FPenParams.Width:= TSpinEdit(Sender).Value;
-end;
-
-procedure TLineTool.ParamPenStyleChange(Sender: TObject);
-begin
-  FPenParams.Style:= TFPPenStyle(TComboBox(Sender).ItemIndex);
 end;
 
 procedure TLineTool.CreateFigure;
@@ -453,61 +318,40 @@ end;
 
 procedure TLineTool.InitializeFigure(APoint: TDoublePoint);
 begin
-  case FParamFigure of
-    lntlLine : FFigure.Points[1]:= APoint;
-    lntlPen : FFigure.SetPointsLength(1);
-  end;
   FFigure.Points[0]:= APoint;
-  TLineFigure(FFigure).PenParams:= FPenParams;
+  FFigure.Points[1]:= APoint;
+end;
+
+procedure TLineTool.SetFigureParams;
+begin
+  TLineFigure(FFigure).PenParams:= TLineToolParameters(FParams).Pen;
 end;
 
 procedure TLineTool.SetParamColor(AFigureColors: TFigureColors);
 begin
-  FPenParams.Color:= AFigureColors.Pen;
+  TLineToolParameters(FParams).Pen.Color:= AFigureColors.Pen;
 end;
 
 procedure TLineTool.SetParamsPanel(APanel: TPanel);
-var
-  TotalLeft: Integer;
-  Param: TWinControl;
-const
-  Left: Integer = 5;
-  Top: Integer = 8;
 begin
-  TotalLeft:= Left;
-  Param:= CreateParamComboBox(APanel, Point(TotalLeft, Top), FParamFigureDisplayString, Integer(FParamFigure), @ParamFigureChange);
-  TotalLeft:= TotalLeft + Param.Width + Left;
-  Param:= CreateParamSpinEdit(APanel, Point(TotalLeft, Top), 1, 100, FPenParams.Width, @ParamPenWidthChange);
-  TotalLeft:= TotalLeft + Param.Width + Left;
-  Param:= CreateParamComboBox(APanel, Point(TotalLeft, Top), 8, Integer(FPenParams.Style), @ParamPenStyleComboBoxDrawItem,
-    @ParamPenStyleChange);
+  FParams.FillUserInterface(APanel);
 end;
 
 procedure TLineTool.MouseDown(APoint: TDoublePoint; AShift: TShiftState);
 begin
   CreateFigure;
   InitializeFigure(APoint);
+  SetFigureParams;
 end;
 
 procedure TLineTool.MouseMove(APoint: TDoublePoint; AShift: TShiftState);
 begin
-  case FParamFigure of
-    lntlPen : begin
-      FFigure.IncreasePointsLength;
-      FFigure.Points[High(FFigure.Points)]:= APoint;
-    end;
-    lntlLine : begin
-      FFigure.Points[1]:= APoint;
-    end
-  end;
+  FFigure.Points[1]:= APoint;
 end;
 
 procedure TShapeTool.CreateFigure;
 begin
-  case FParamFigure of
-    shfigEllipse : FFigure:= TEllipseFigure.Create;
-    shfigRect : FFigure:= TRectFigure.Create;
-  end;
+  FFigure:= TEllipseFigure.Create;
   Figures.AddFigure(FFigure);
 end;
 
@@ -515,88 +359,38 @@ procedure TShapeTool.InitializeFigure(APoint: TDoublePoint);
 begin
   FFigure.Points[0]:= APoint;
   FFigure.Points[1]:= APoint;
-  TShapeFigure(FFigure).PenParams:= FPenParams;
-  TShapeFigure(FFigure).BrushParams:= FBrushParams;
 end;
 
-procedure TShapeTool.ParamBrushStyleComboBoxDrawItem(Control: TWinControl; AIndex: Integer; ARect: TRect;
-  AState: TOwnerDrawState);
-const
-  BrushStyles: array[0..7] of TFPBrushStyle = (bsSolid, bsClear, bsHorizontal, bsVertical, bsFDiagonal,
-    bsBDiagonal, bsCross, bsDiagCross);
+procedure TShapeTool.SetFigureParams;
 begin
-  ARect.Left+= 8;
-  ARect.Right-= 8;
-  ARect.Top+= 4;
-  ARect.Bottom-= 3;
-  if AIndex in [Low(BrushStyles)..High(BrushStyles)] then
-    TComboBox(Control).Canvas.Brush.Style:= BrushStyles[AIndex];
-  TComboBox(Control).Canvas.Pen.Color:= clGray;
-  TComboBox(Control).Canvas.Brush.Color:= clGray;
-  TComboBox(Control).Canvas.Rectangle(ARect);
-end;
-
-procedure TShapeTool.ParamFigureChange(Sender: TObject);
-begin
-  case TComboBox(Sender).ItemIndex of
-    0 : FParamFigure:= shfigEllipse;
-    1 : FParamFigure:= shfigRect;
-  end;
-end;
-
-procedure TShapeTool.ParamPenWidthChange(Sender: TObject);
-begin
-  FPenParams.Width:= TSpinEdit(Sender).Value;
-end;
-
-procedure TShapeTool.ParamPenStyleChange(Sender: TObject);
-begin
-  FPenParams.Style:= TFPPenStyle(TComboBox(Sender).ItemIndex);
-end;
-
-procedure TShapeTool.ParamBrushStyleChange(Sender: TObject);
-begin
-  FBrushParams.Style:= TFPBrushStyle(TComboBox(Sender).ItemIndex);
+  TShapeFigure(FFigure).PenParams:= TShapeToolParameters(FParams).Pen;
+  TShapeFigure(FFigure).BrushParams:= TShapeToolParameters(FParams).Brush;
 end;
 
 constructor TShapeTool.Create;
 begin
   inherited Create;
+  FParams:= TShapeToolParameters.Create;
   FMetadata.Name:= 'Shape';
   FMetadata.Bitmap.LoadFromFile('src/shape_tool.bmp');
 end;
 
 procedure TShapeTool.SetParamColor(AFigureColors: TFigureColors);
 begin
-  FPenParams.Color:= AFigureColors.Pen;
-  FBrushParams.Color:= AFigureColors.Brush;
+  TShapeToolParameters(FParams).Pen.Color:= AFigureColors.Pen;
+  TShapeToolParameters(FParams).Brush.Color:= AFigureColors.Brush;
 end;
 
 procedure TShapeTool.SetParamsPanel(APanel: TPanel);
-var
-  Param: TWinControl;
-  TotalLeft: Integer;
-const
-  Left: Integer = 5;
-  Top: Integer = 8;
 begin
-  TotalLeft:= Left;
-  Param:= CreateParamComboBox(APanel, Point(TotalLeft, Top), FParamFigureDisplayString, Integer(FParamFigure), @ParamFigureChange);
-  TotalLeft:= TotalLeft+Param.Width+Left;
-  Param:= CreateParamSpinEdit(APanel, Point(TotalLeft, Top), 1, 100, FPenParams.Width, @ParamPenWidthChange);
-  TotalLeft:= TotalLeft+Param.Width+Left;
-  Param:= CreateParamComboBox(APanel, Point(TotalLeft, Top), 4, Integer(FPenParams.Style),
-    @ParamPenStyleComboBoxDrawItem, @ParamPenStyleChange);
-  TotalLeft:= TotalLeft+Param.Width+Left;
-  Param:= CreateParamComboBox(APanel, Point(TotalLeft, Top), 8, Integer(FBrushParams.Style),
-    @ParamBrushStyleComboBoxDrawItem, @ParamBrushStyleChange);
-  TotalLeft:= TotalLeft+Param.Width+Left;
+  FParams.FillUserInterface(APanel);
 end;
 
 procedure TShapeTool.MouseDown(APoint: TDoublePoint; AShift: TShiftState);
 begin
   CreateFigure;
   InitializeFigure(APoint);
+  SetFigureParams;
 end;
 
 procedure TShapeTool.MouseMove(APoint: TDoublePoint; AShift: TShiftState);
@@ -604,15 +398,10 @@ begin
   FFigure.Points[1]:= APoint;
 end;
 
-procedure TRegularPolygonTool.ParamAngleCountChange(Sender: TObject);
-begin
-  FParamAngleCount:= TSpinEdit(Sender).Value;
-end;
-
 procedure TRegularPolygonTool.CreateFigure;
 begin
   FFigure:= TPolygonFigure.Create;
-  FFigure.SetPointsLength(FParamAngleCount);
+  FFigure.SetPointsLength(TRegularPolygonToolParameters(FParams).AngleCount);
   FFigures.AddFigure(FFigure);
 end;
 
@@ -621,38 +410,30 @@ begin
   inherited InitializeFigure(APoint);
 end;
 
+procedure TRegularPolygonTool.SetFigureParams;
+begin
+  inherited SetFigureParams;
+end;
+
 constructor TRegularPolygonTool.Create;
 begin
   inherited Create;
+  FParams:= TRegularPolygonToolParameters.Create;
   FMetadata.Name:= 'RegularPolygon';
   FMetadata.Bitmap.LoadFromFile('src/regular_tool.bmp');
-  FParamAngleCount:= 3;
+  TRegularPolygonToolParameters(FParams).AngleCount:= 3;
 end;
 
 procedure TRegularPolygonTool.SetParamsPanel(APanel: TPanel);
-var
-  Param: TWinControl;
-  TotalLeft: Integer;
-const
-  Left: Integer = 5;
-  Top: Integer = 8;
 begin
-  TotalLeft:= Left;
-  Param:= CreateParamSpinEdit(APanel, Point(TotalLeft, Top), 3, 1000000, FParamAngleCount, @ParamAngleCountChange);
-  TotalLeft:= TotalLeft+Param.Width+Left;
-  Param:= CreateParamSpinEdit(APanel, Point(TotalLeft, Top), 1, 100, FPenParams.Width, @ParamPenWidthChange);
-  TotalLeft:= TotalLeft+Param.Width+Left;
-  Param:= CreateParamComboBox(APanel, Point(TotalLeft, Top), 4, Integer(FPenParams.Style),
-    @ParamPenStyleComboBoxDrawItem, @ParamPenStyleChange);
-  TotalLeft:= TotalLeft+Param.Width+Left;
-  Param:= CreateParamComboBox(APanel, Point(TotalLeft, Top), 8, Integer(FBrushParams.Style),
-    @ParamBrushStyleComboBoxDrawItem, @ParamBrushStyleChange);
+  FParams.FillUserInterface(APanel);
 end;
 
 procedure TRegularPolygonTool.MouseDown(APoint: TDoublePoint; AShift: TShiftState);
 begin
   CreateFigure;
   InitializeFigure(APoint);
+  SetFigureParams;
   FFirstPoint:= APoint;
 end;
 
@@ -662,15 +443,11 @@ var
   vec: TDoublePoint;
 begin
   vec:= APoint - FFirstPoint;
-  for i:= 0 to FParamAngleCount-1 do begin
-    FFigure.Points[i]:= vec+FFirstPoint;
-    vec.Rotate(2*pi/FParamAngleCount);
-  end;
-end;
-
-procedure TRoundedRectTool.ParamRoundingChange(Sender: TObject);
-begin
-  FParamRounding:= TSpinEdit(Sender).Value;
+  with TRegularPolygonToolParameters(FParams) do
+    for i:= 0 to AngleCount-1 do begin
+      FFigure.Points[i]:= vec+FFirstPoint;
+      vec.Rotate(2*pi/AngleCount);
+    end;
 end;
 
 procedure TRoundedRectTool.CreateFigure;
@@ -682,40 +459,32 @@ end;
 procedure TRoundedRectTool.InitializeFigure(APoint: TDoublePoint);
 begin
   inherited InitializeFigure(APoint);
-  TRoundedRectFigure(FFigure).Rounding:= FParamRounding;
+end;
+
+procedure TRoundedRectTool.SetFigureParams;
+begin
+  inherited SetFigureParams;
+  TRoundedRectFigure(FFigure).Rounding:= TRoundedRectToolParameters(FParams).Rounding;
 end;
 
 constructor TRoundedRectTool.Create;
 begin
   inherited Create;
+  FParams:= TRoundedRectToolParameters.Create;
   FMetadata.Name:= 'RoundedRect';
   FMetadata.Bitmap.LoadFromFile('src/rect_tool.bmp');
 end;
 
 procedure TRoundedRectTool.SetParamsPanel(APanel: TPanel);
-var
-  Param: TWinControl;
-  TotalLeft, i: Integer;
-const
-  Left: Integer = 5;
-  Top: Integer = 8;
 begin
-  TotalLeft:= Left;
-  Param:= CreateParamSpinEdit(APanel, Point(TotalLeft, Top), 0, 1000, FParamRounding, @ParamRoundingChange);
-  TotalLeft:= TotalLeft+Param.Width+Left;
-  Param:= CreateParamSpinEdit(APanel, Point(TotalLeft, Top), 1, 100, FPenParams.Width, @ParamPenWidthChange);
-  TotalLeft:= TotalLeft+Param.Width+Left;
-  Param:= CreateParamComboBox(APanel, Point(TotalLeft, Top), 4, Integer(FPenParams.Style),
-    @ParamPenStyleComboBoxDrawItem, @ParamPenStyleChange);
-  TotalLeft:= TotalLeft+Param.Width+Left;
-  Param:= CreateParamComboBox(APanel, Point(TotalLeft, Top), 8, Integer(FBrushParams.Style),
-    @ParamBrushStyleComboBoxDrawItem, @ParamBrushStyleChange);
+  FParams.FillUserInterface(APanel);
 end;
 
 procedure TRoundedRectTool.MouseDown(APoint: TDoublePoint; AShift: TShiftState);
 begin
   CreateFigure;
   InitializeFigure(APoint);
+  SetFigureParams;
 end;
 
 procedure TRoundedRectTool.MouseMove(APoint: TDoublePoint; AShift: TShiftState);
