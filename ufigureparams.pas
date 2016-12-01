@@ -14,16 +14,28 @@ type
     Pen: TColor;
   end;
 
-  TPenParams = record
-    Style: TFPPenStyle;
-    Width: Integer;
-    Color: TColor;
+  TPenParams = object
+  private
+    FStyle: TFPPenStyle;
+    FWidth: Integer;
+    FColor: TColor;
+  public
+    property Style: TFPPenStyle read FStyle write FStyle;
+    property Width: Integer read FWidth write FWidth;
+    property Color: TColor read FColor write FColor;
   end;
 
-  TBrushParams = record
-    Style: TFPBrushStyle;
-    Color: TColor;
+  TBrushParams = object
+  private
+    FStyle: TFPBrushStyle;
+    FColor: TColor;
+  public
+    property Style: TFPBrushStyle read FStyle write FStyle;
+    property Color: TColor read FColor write FColor;
   end;
+
+  PPenParams = ^TPenParams;
+  PBrushParams = ^TBrushParams;
 
   function MakeFigureColors(Pen, Brush: TColor): TFigureColors;
 
