@@ -36,6 +36,7 @@ type
   operator =(A: TPoint; B: TPoint): Boolean;
   operator :=(A: TPoint): TDoublePoint;
 
+  function GetVecMultiplyLength(A, B: TDoublePoint): Double;
   function GetDoublePoint(AX: Double = 0; AY: Double = 0): TDoublePoint;
   function PointToDoublePoint(APoint: TPoint): TDoublePoint;
 
@@ -134,9 +135,9 @@ begin
 end;
 
 operator =(A: TDoublePoint; B: TDoublePoint): Boolean;
-  begin
-    Result:= (A.X = B.X) and (A.Y = B.Y);
-  end;
+begin
+  Result:= (A.X = B.X) and (A.Y = B.Y);
+end;
 
 operator =(A: TPoint; B: TPoint): Boolean;
 begin
@@ -147,6 +148,11 @@ operator :=(A: TPoint): TDoublePoint;
 begin
   Result.X:= A.X;
   Result.Y:= A.Y;
+end;
+
+function GetVecMultiplyLength(A, B: TDoublePoint): Double;
+begin
+ Result:= A.X*B.Y-A.Y*B.X;
 end;
 
 function GetDoublePoint(AX: Double = 0; AY: Double = 0): TDoublePoint;
