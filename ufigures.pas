@@ -161,7 +161,7 @@ var
 begin
   for i:= 0 to High(FPoints)-1 do begin
     A:= FPoints[i]; B:= FPoints[i+1];
-    if IsPointInLine(A, B, APoint, 1600) then Exit(true);
+    if IsPointInLineSegment(A, B, APoint, 1600) then Exit(true);
   end;
   Exit(False);
 end;
@@ -209,7 +209,8 @@ begin
   with APaintSpace do begin
     SetParams(FPenParams, Canvas.Pen);
     SetParams(FBrushParams, Canvas.Brush);
-    Canvas.Pen.Color:= clRed;
+    if FSelected then
+      Canvas.Pen.Color:= clRed;
     Canvas.Rectangle(ToLocal(FPoints[0]).X, ToLocal(FPoints[0]).Y,
                      ToLocal(FPoints[1]).X, ToLocal(FPoints[1]).Y);
   end;
