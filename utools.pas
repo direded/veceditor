@@ -100,17 +100,37 @@ type
     procedure MouseDown(APoint: TDoublePoint; AShift: TShiftState); override;
 	end;
 
+  TPenTool = class(TLineTool)
+  strict protected
+    procedure InitializeFigure(APoint: TDoublePoint); override;
+  public
+    constructor Create;
+    procedure MouseMove(APoint: TDoublePoint; AShift: TShiftState); override;
+	end;
+
 	TShapeTool = class(TDrawingTool)
   strict protected
-    procedure CreateFigure; override;
     procedure InitializeFigure(APoint: TDoublePoint); override;
     procedure SetFigureParams; override;
   public
-    constructor Create;
     procedure SetParamColor(AFigureColors: TFigureColors); override;
     procedure SetParamsPanel(APanel: TPanel); override;
     procedure MouseMove(APoint: TDoublePoint; AShift: TShiftState); override;
     procedure MouseDown(APoint: TDoublePoint; AShift: TShiftState); override;
+  end;
+
+  TEllipseTool = class(TShapeTool)
+  strict protected
+    procedure CreateFigure; override;
+  public
+    constructor Create;
+  end;
+
+  TRectTool = class(TShapeTool)
+  strict protected
+    procedure CreateFigure; override;
+  public
+    constructor Create;
   end;
 
   TRegularPolygonTool = class(TShapeTool)
@@ -303,9 +323,9 @@ end;
 
 constructor TLineTool.Create;
 begin
-  inherited Create;
   FParams:= TLineToolParameters.Create;
   FMetadata.Name:= 'Line';
+  FMetadata.Bitmap:= TBitmap.Create;
   FMetadata.Bitmap.LoadFromFile('src/line_tool.bmp');
 end;
 
@@ -348,10 +368,24 @@ begin
   FFigure.Points[1]:= APoint;
 end;
 
-procedure TShapeTool.CreateFigure;
+procedure TPenTool.InitializeFigure(APoint: TDoublePoint);
 begin
-  FFigure:= TEllipseFigure.Create;
-  Figures.AddFigure(FFigure);
+  FFigure.SetPointsLength(1);
+  FFigure.Points[0]:= APoint;
+end;
+
+constructor TPenTool.Create;
+begin
+  FParams:= TLineToolParameters.Create;
+  FMetadata.Name:= 'Pen';
+  FMetadata.Bitmap:= TBitmap.Create;
+  FMetadata.Bitmap.LoadFromFile('src/pen_tool.bmp');
+end;
+
+procedure TPenTool.MouseMove(APoint: TDoublePoint; AShift: TShiftState);
+begin
+  FFigure.IncreasePointsLength;
+  FFigure.Points[High(FFigure.Points)]:= APoint;
 end;
 
 procedure TShapeTool.InitializeFigure(APoint: TDoublePoint);
@@ -364,14 +398,6 @@ procedure TShapeTool.SetFigureParams;
 begin
   TShapeFigure(FFigure).PenParams:= TShapeToolParameters(FParams).Pen;
   TShapeFigure(FFigure).BrushParams:= TShapeToolParameters(FParams).Brush;
-end;
-
-constructor TShapeTool.Create;
-begin
-  inherited Create;
-  FParams:= TShapeToolParameters.Create;
-  FMetadata.Name:= 'Shape';
-  FMetadata.Bitmap.LoadFromFile('src/shape_tool.bmp');
 end;
 
 procedure TShapeTool.SetParamColor(AFigureColors: TFigureColors);
@@ -397,6 +423,34 @@ begin
   FFigure.Points[1]:= APoint;
 end;
 
+procedure TEllipseTool.CreateFigure;
+begin
+  FFigure:= TEllipseFigure.Create;
+  FFigures.AddFigure(FFigure);
+end;
+
+constructor TEllipseTool.Create;
+begin
+  FParams:= TShapeToolParameters.Create;
+  FMetadata.Name:= 'Ellipse';
+  FMetadata.Bitmap:= TBitmap.Create;
+  FMetadata.Bitmap.LoadFromFile('src/ellipse_tool.bmp');
+end;
+
+procedure TRectTool.CreateFigure;
+begin
+  FFigure:= TRectFigure.Create;
+  FFigures.AddFigure(FFigure);
+end;
+
+constructor TRectTool.Create;
+begin
+  FParams:= TShapeToolParameters.Create;
+  FMetadata.Name:= 'Rect';
+  FMetadata.Bitmap:= TBitmap.Create;
+  FMetadata.Bitmap.LoadFromFile('src/rect_tool.bmp');
+end;
+
 procedure TRegularPolygonTool.CreateFigure;
 begin
   FFigure:= TPolygonFigure.Create;
@@ -416,9 +470,9 @@ end;
 
 constructor TRegularPolygonTool.Create;
 begin
-  inherited Create;
   FParams:= TRegularPolygonToolParameters.Create;
   FMetadata.Name:= 'RegularPolygon';
+  FMetadata.Bitmap:= TBitmap.Create;
   FMetadata.Bitmap.LoadFromFile('src/regular_tool.bmp');
   TRegularPolygonToolParameters(FParams).AngleCount:= 3;
 end;
@@ -468,9 +522,9 @@ end;
 
 constructor TRoundedRectTool.Create;
 begin
-  inherited Create;
   FParams:= TRoundedRectToolParameters.Create;
   FMetadata.Name:= 'RoundedRect';
+  FMetadata.Bitmap:= TBitmap.Create;
   FMetadata.Bitmap.LoadFromFile('src/rect_tool.bmp');
 end;
 
@@ -495,7 +549,9 @@ initialization
   RegisterTool(TSelectTool.Create);
   RegisterTool(THandTool.Create);
   RegisterTool(TLineTool.Create);
-  RegisterTool(TShapeTool.Create);
+  RegisterTool(TPenTool.Create);
+  RegisterTool(TRectTool.Create);
+  RegisterTool(TEllipseTool.Create);
   RegisterTool(TRegularPolygonTool.Create);
   RegisterTool(TRoundedRectTool.Create);
   RegisterTool(TZoomTool.Create);
