@@ -64,6 +64,11 @@ type
   end;
 
 	TSelectTool = class(TTool)
+  private
+    FFirstPoint: TDoublePoint;
+    FSplitOff: TRectSplitOffFigure;
+    const
+      CLICK_SIZE: Integer = 3;
   public
   	constructor Create;
     procedure MouseDown(APoint: TDoublePoint; AShift: TShiftState); override;
@@ -179,14 +184,30 @@ end;
 
 procedure TSelectTool.MouseDown(APoint: TDoublePoint; AShift: TShiftState);
 begin
+  FFirstPoint:= APoint;
+  FSplitOff:= TRectSplitOffFigure.Create;
+  FFigures.AddFigure(FSplitOff);
 end;
 
 procedure TSelectTool.MouseMove(APoint: TDoublePoint; AShift: TShiftState);
 begin
+  if (FFirstPoint - APoint).Length <= CLICK_SIZE then Exit;
+  FSplitOff.Points[0]:= FFirstPoint;
+  FSplitOff.Points[1]:= APoint;
 end;
 
 procedure TSelectTool.MouseUp(APoint: TDoublePoint; AShift: TShiftState);
 begin
+  FFigures.RemoveLastFigure;
+  if (FFirstPoint - APoint).Length > CLICK_SIZE then Exit;
+  if ssCtrl in AShift then
+    Figures.ReverseSelectFigure(APoint)
+  else if ssShift in AShift then
+    FFigures.SelectFigure(APoint)
+  else begin
+    FFigures.UnSelectAllFigures;
+    FFigures.SelectFigure(APoint);
+  end;
 end;
 
 constructor THandTool.Create;
