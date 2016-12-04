@@ -206,27 +206,39 @@ procedure TSelectTool.MouseDown(APoint: TDoublePoint; AShift: TShiftState);
 begin
   FFirstPoint:= APoint;
   FSplitOff:= TRectSplitOffFigure.Create;
+  FSplitOff.Points[0]:= APoint;
+  FSplitOff.Points[1]:= APoint;
   FFigures.AddFigure(FSplitOff);
 end;
 
 procedure TSelectTool.MouseMove(APoint: TDoublePoint; AShift: TShiftState);
 begin
   if (FFirstPoint - APoint).Length <= CLICK_SIZE then Exit;
-  FSplitOff.Points[0]:= FFirstPoint;
   FSplitOff.Points[1]:= APoint;
 end;
 
 procedure TSelectTool.MouseUp(APoint: TDoublePoint; AShift: TShiftState);
 begin
   FFigures.RemoveLastFigure;
-  if (FFirstPoint - APoint).Length > CLICK_SIZE then Exit;
-  if ssCtrl in AShift then
-    Figures.ReverseSelectFigure(APoint)
-  else if ssShift in AShift then
-    FFigures.SelectFigure(APoint)
-  else begin
-    FFigures.UnSelectAllFigures;
-    FFigures.SelectFigure(APoint);
+  if (FFirstPoint-APoint).Length > CLICK_SIZE then begin
+    if FFirstPoint.X<APoint.X then begin
+      if not (ssShift in AShift) then
+        Figures.UnSelectAllFigures;
+      Figures.SpaceSelectFullFigures(FFirstPoint, APoint)
+    end else begin
+      if not (ssShift in AShift) then
+        Figures.UnSelectAllFigures;
+      Figures.SpaceSelectPartFigures(FFirstPoint, APoint);
+      end;
+  end else begin
+    if ssCtrl in AShift then
+      Figures.ReverseSelectFigure(APoint)
+    else if ssShift in AShift then
+      FFigures.SelectFigure(APoint)
+    else begin
+      FFigures.UnSelectAllFigures;
+      FFigures.SelectFigure(APoint);
+    end;
   end;
 end;
 

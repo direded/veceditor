@@ -23,6 +23,8 @@ type
     property Bounds: TTwoDoublePointsArray read FBounds;
     property Selected: Boolean read FSelected write FSelected;
     function IsPointInclude(APoint: TDoublePoint): Boolean; virtual; abstract;
+    function IsFullInRect(A, B: TDoublePoint): Boolean; virtual; abstract;
+    function IsPartInRect(A, B: TDoublePoint): Boolean; virtual; abstract;
     function IsValid: Boolean; virtual; abstract;
     procedure SetPointsLength(ALength: Integer);
     procedure IncreasePointsLength;
@@ -39,6 +41,8 @@ type
     property PenParams: TPenParams read FPenParams write FPenParams;
     constructor Create;
     function IsPointInclude(APoint: TDoublePoint): Boolean; override;
+    function IsFullInRect(A, B: TDoublePoint): Boolean; override;
+    function IsPartInRect(A, B: TDoublePoint): Boolean; override;
     function IsValid: Boolean; override;
     procedure Draw(APaintSpace: TPaintSpace); override;
   end;
@@ -103,6 +107,8 @@ type
     constructor Create;
     function SelectFigure(APoint: TDoublePoint): TFigure;
     function ReverseSelectFigure(APoint: TDoublePoint): TFigure;
+    procedure SpaceSelectFullFigures(A, B: TDoublePoint);
+    procedure SpaceSelectPartFigures(A, B: TDoublePoint);
     procedure UnSelectAllFigures;
     procedure AddFigure(AFigure: TFigure);
     function RemoveFigure(AElementID: Longint): Boolean;
@@ -164,6 +170,28 @@ begin
     if IsPointInLineSegment(A, B, APoint, 1600) then Exit(true);
   end;
   Exit(False);
+end;
+
+function TLineFigure.IsFullInRect(A, B: TDoublePoint): Boolean;
+var
+  p: TDoublePoint;
+begin
+  for p in FPoints do
+    if not ((Min(A.X, B.X) <= p.X) and (p.X <= Max(A.X, B.X)) and
+      (Min(A.Y, B.Y) <= p.Y) and (p.Y <= Max(A.Y, B.Y))) then
+      Exit(false);
+  Exit(true);
+end;
+
+function TLineFigure.IsPartInRect(A, B: TDoublePoint): Boolean; // FIX!
+var
+  p: TDoublePoint;
+begin
+  for p in FPoints do
+    if (Min(A.X, B.X) <= p.X) and (p.X <= Max(A.X, B.X)) and
+      (Min(A.Y, B.Y) <= p.Y) and (p.Y <= Max(A.Y, B.Y)) then
+      Exit(true);
+  Exit(false);
 end;
 
 function TLineFigure.IsValid: Boolean;
@@ -359,6 +387,25 @@ begin
       Exit(FContent[i]);
     end;
   Result:= nil;
+end;
+
+procedure TFigures.SpaceSelectFullFigures(A, B: TDoublePoint);
+var
+  i: Integer;
+begin
+  write('Triggered');
+  for i:= High(FContent) downto 0 do
+    if FContent[i].IsFullInRect(A, B) then
+      FIsSelected[i]:= true;
+end;
+
+procedure TFigures.SpaceSelectPartFigures(A, B: TDoublePoint);
+var
+  i: Integer;
+begin
+  for i:= High(FContent) downto 0 do
+    if FContent[i].IsPartInRect(A, B) then
+      FIsSelected[i]:= true;
 end;
 
 procedure TFigures.UnSelectAllFigures;
