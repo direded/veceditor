@@ -70,11 +70,13 @@ type
     FSplitOff: TRectSplitOffFigure;
     FIsFirstOnFigure: Boolean;
     FLastPoint: TDoublePoint;
+    procedure FSelectAllBtnClick(Sender: TObject);
     const
       CLICK_SIZE: Integer = 3;
   public
   	constructor Create;
     procedure CleanUp; override;
+    procedure SetParamsPanel(APanel: TPanel); override;
     procedure MouseDown(APoint: TDoublePoint; AShift: TShiftState); override;
     procedure MouseMove(APoint: TDoublePoint; AShift: TShiftState); override;
   	procedure MouseUp(APoint:TDoublePoint; AShift: TShiftState); override;
@@ -204,10 +206,18 @@ begin
 
 end;
 
+procedure TSelectTool.FSelectAllBtnClick(Sender: TObject);
+begin
+  FFigures.SelectAllFigures;
+  FPaintSpace.PaintBox.Invalidate;
+end;
+
 constructor TSelectTool.Create;
 begin
   inherited Create;
   FMetadata.Name:= 'Select';
+  FParams:= TSelectToolParameters.Create;
+  TSelectToolParameters(FParams).SelectAllBtnClick:= @FSelectAllBtnClick;
   FMetadata.Bitmap.LoadFromFile('src/select_tool.bmp');
 end;
 
@@ -215,6 +225,11 @@ procedure TSelectTool.CleanUp;
 begin
   FFigures.UnSelectAllFigures;
   FPaintSpace.PaintBox.Invalidate;
+end;
+
+procedure TSelectTool.SetParamsPanel(APanel: TPanel);
+begin
+  FParams.FillUserInterface(APanel);
 end;
 
 procedure TSelectTool.MouseDown(APoint: TDoublePoint; AShift: TShiftState);

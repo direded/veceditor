@@ -121,6 +121,7 @@ type
     function ReverseSelectFigure(APoint: TDoublePoint): TFigure;
     procedure SpaceSelectFullFigures(A, B: TDoublePoint);
     procedure SpaceSelectPartFigures(A, B: TDoublePoint);
+    procedure SelectAllFigures;
     procedure UnSelectAllFigures;
     function CanSelectFigure(APoint: TDoublePoint): Boolean;
     procedure MoveSelected(AValue: TDoublePoint);
@@ -507,6 +508,14 @@ begin
   for i:= High(FContent) downto 0 do
     if FContent[i].IsPartInRect(A, B) then
       FIsSelected[i]:= true;
+end;
+
+procedure TFigures.SelectAllFigures;
+var
+  i: Integer;
+begin
+  for i:= 0 to High(FIsSelected) do
+    FIsSelected[i]:= true;
 end;
 
 procedure TFigures.UnSelectAllFigures;

@@ -33,6 +33,15 @@ type
     procedure FillUserInterface(AControl: TWinControl); virtual; abstract;
   end;
 
+  TSelectToolParameters = class(TToolParameters)
+  strict protected
+    FSelectAllBtnClick: TParamChangingEvent;
+  public
+    constructor Create;
+    property SelectAllBtnClick: TParamChangingEvent read FSelectAllBtnClick write FSelectAllBtnClick;
+    procedure FillUserInterface(AControl: TWinControl); override;
+  end;
+
   TZoomToolParameters = class(TToolParameters)
   strict protected
   type
@@ -181,6 +190,23 @@ procedure TToolParameters.SetUISettings(ALeft, ATop: Integer);
 begin
   UISettings.Left:= ALeft;
   UISettings.Top:= ATop;
+end;
+
+constructor TSelectToolParameters.Create;
+begin
+  inherited Create;
+end;
+
+procedure TSelectToolParameters.FillUserInterface(AControl: TWinControl);
+var
+  Btn: TButton;
+begin
+  Btn:= TButton.Create(AControl);
+  Btn.Parent:= AControl;
+  Btn.Left:= UISettings.Left;
+  Btn.Top:= UISettings.Top;
+  Btn.Caption:= 'Select all';
+  Btn.OnClick:= FSelectAllBtnClick;
 end;
 
 procedure TZoomToolParameters.FModeChange(Sender: TObject);
