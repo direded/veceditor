@@ -18,6 +18,9 @@ type
     FBounds: TTwoDoublePointsArray;
     FPoints: TDoublePointArray;
     FSelected: Boolean;
+    class procedure SetSelectionEllipseParams(APen: TPen; ABrush: TBrush);
+    procedure DrawSelection(APaintSpace: TPaintSpace); virtual; abstract;
+    procedure SetSelectionParams(APen: TPen; ABrush: TBrush); virtual; abstract;
   public
     property Points: TDoublePointArray read FPoints write FPoints;
     property Bounds: TTwoDoublePointsArray read FBounds;
@@ -37,6 +40,8 @@ type
   TLineFigure = class(TFigure)
   strict protected
     FPenParams: TPenParams;
+    procedure DrawSelection(APaintSpace: TPaintSpace); override;
+    procedure SetSelectionParams(APen: TPen; ABrush: TBrush); override;
   public
     property PenParams: TPenParams read FPenParams write FPenParams;
     constructor Create;
@@ -50,6 +55,7 @@ type
   TShapeFigure = class(TLineFigure)
   strict protected
     FBrushParams: TBrushParams;
+    procedure SetSelectionParams(APen: TPen; ABrush: TBrush); override;
   public
     constructor Create;
     property BrushParams: TBrushParams read FBrushParams write FBrushParams;
@@ -59,15 +65,17 @@ type
   TRectFigure = class(TShapeFigure)
   public
     constructor Create;
-    function IsPointInclude(APoint: TDoublePoint): Boolean; override; // not realised
+    function IsPointInclude(APoint: TDoublePoint): Boolean; override;
     procedure Draw(APaintSpace: TPaintSpace); override;
   end;
 
   TPolygonFigure = class(TShapeFigure)
+  strict protected
+    procedure DrawSelection(APaintSpace: TPaintSpace); override;
   public
     constructor Create;
     function IsValid: Boolean; override;
-    function IsPointInclude(APoint: TDoublePoint): Boolean; override; // not realised
+    function IsPointInclude(APoint: TDoublePoint): Boolean; override;
     procedure Draw(APaintSpace: TPaintSpace); override;
   end;
 
@@ -79,6 +87,8 @@ type
   end;
 
   TEllipseFigure = class(TShapeFigure)
+  strict protected
+    procedure DrawSelection(APaintSpace: TPaintSpace); override;
 	public
     constructor Create;
     function IsPointInclude(APoint: TDoublePoint): Boolean; override;
@@ -135,6 +145,15 @@ begin
     ABounds[1].Y:= APoint.Y;
 end;
 
+class procedure TFigure.SetSelectionEllipseParams(APen: TPen; ABrush: TBrush);
+begin
+  APen.Color:= RGBToColor(100, 100, 100);
+  APen.Width:= 1;
+  APen.Style:= psSolid;
+  ABrush.Style:= bsClear;
+  ABrush.Color:= clWhite;
+end;
+
 procedure TFigure.IncreasePointsLength;
 begin
   SetLength(FPoints, Length(FPoints)+1);
@@ -153,6 +172,20 @@ begin
   FBounds[1]:= FPoints[0];
   for P in FPoints do
     SetBounds(FBounds, P);
+end;
+
+procedure TLineFigure.DrawSelection(APaintSpace: TPaintSpace);
+begin
+  with APaintSpace do begin
+    SetSelectionEllipseParams(Canvas.Pen, Canvas.Brush);
+    Canvas.EllipseC(ToLocal(FPoints[0]).X, ToLocal(FPoints[0]).Y, 3, 3);
+    Canvas.EllipseC(ToLocal(FPoints[High(FPoints)]).X, ToLocal(FPoints[High(FPoints)]).Y, 3, 3);
+  end;
+end;
+
+procedure TLineFigure.SetSelectionParams(APen: TPen; ABrush: TBrush);
+begin
+  APen.Width:= APen.Width+1;
 end;
 
 constructor TLineFigure.Create;
@@ -204,9 +237,17 @@ begin
   with APaintSpace do begin
     SetParams(FPenParams, Canvas.Pen);
     if FSelected then
-      Canvas.Pen.Color:= clRed;
-  	Canvas.Polyline(ToLocal(FPoints));
+      SetSelectionParams(Canvas.Pen, Canvas.Brush);
+    Canvas.Polyline(ToLocal(FPoints));
+    if FSelected then
+      DrawSelection(APaintSpace);
   end;
+end;
+
+procedure TShapeFigure.SetSelectionParams(APen: TPen; ABrush: TBrush);
+begin
+  APen.Width:= APen.Width+1;
+  ABrush.Color:= ColorToRGB(ABrush.Color)-$101010;
 end;
 
 constructor TShapeFigure.Create;
@@ -238,9 +279,22 @@ begin
     SetParams(FPenParams, Canvas.Pen);
     SetParams(FBrushParams, Canvas.Brush);
     if FSelected then
-      Canvas.Pen.Color:= clRed;
+      SetSelectionParams(Canvas.Pen, Canvas.Brush);
     Canvas.Rectangle(ToLocal(FPoints[0]).X, ToLocal(FPoints[0]).Y,
                      ToLocal(FPoints[1]).X, ToLocal(FPoints[1]).Y);
+    if FSelected then
+      DrawSelection(APaintSpace);
+  end;
+end;
+
+procedure TPolygonFigure.DrawSelection(APaintSpace: TPaintSpace);
+var
+  p: TDoublePoint;
+begin
+  with APaintSpace do begin
+    SetSelectionEllipseParams(Canvas.Pen, Canvas.Brush);
+    for p in FPoints do
+      Canvas.EllipseC(ToLocal(p).X, ToLocal(p).Y, 3, 3);
   end;
 end;
 
@@ -271,8 +325,10 @@ begin
     SetParams(FPenParams, Canvas.Pen);
     SetParams(FBrushParams, Canvas.Brush);
     if FSelected then
-      Canvas.Pen.Color:= clRed;
+      SetSelectionParams(Canvas.Pen, Canvas.Brush);
     Canvas.Polygon(ToLocal(Points));
+    if FSelected then
+      DrawSelection(APaintSpace);
   end;
 end;
 
@@ -293,6 +349,22 @@ begin
     SetParams(FPenParams, Canvas.Pen);
     Canvas.Frame(ToLocal(FPoints[0]).X, ToLocal(FPoints[0]).Y,
                  ToLocal(FPoints[1]).X, ToLocal(FPoints[1]).Y);
+  end;
+end;
+
+procedure TEllipseFigure.DrawSelection(APaintSpace: TPaintSpace);
+var
+  middle: TDoublePoint;
+begin
+  with APaintSpace do begin
+    middle:= GetDoublePoint(0.5*FBounds[0].X+0.5*FBounds[1].X,
+                            0.5*FBounds[0].Y+0.5*FBounds[1].Y);
+    SetSelectionEllipseParams(Canvas.Pen, Canvas.Brush);
+    Canvas.EllipseC(ToLocal(middle).X, ToLocal(middle).Y, 3, 3);
+    Canvas.EllipseC(ToLocal(middle).X, ToLocal(FBounds[0]).Y, 3, 3);
+    Canvas.EllipseC(ToLocal(middle).X, ToLocal(FBounds[1]).Y, 3, 3);
+    Canvas.EllipseC(ToLocal(FBounds[0]).X, ToLocal(middle).Y, 3, 3);
+    Canvas.EllipseC(ToLocal(FBounds[1]).X, ToLocal(middle).Y, 3, 3);
   end;
 end;
 
@@ -328,9 +400,11 @@ begin
     SetParams(FPenParams, Canvas.Pen);
     SetParams(FBrushParams, Canvas.Brush);
     if FSelected then
-      Canvas.Pen.Color:= clRed;
+      SetSelectionParams(Canvas.Pen, Canvas.Brush);
     Canvas.Ellipse(ToLocal(FPoints[0]).X, ToLocal(FPoints[0]).Y,
                    ToLocal(FPoints[1]).X, ToLocal(FPoints[1]).Y);
+    if FSelected then
+      DrawSelection(APaintSpace);
   end;
 end;
 
@@ -353,10 +427,12 @@ begin
     SetParams(FPenParams, Canvas.Pen);
     SetParams(FBrushParams, Canvas.Brush);
     if FSelected then
-      Canvas.Pen.Color:= clRed;
+      SetSelectionParams(Canvas.Pen, Canvas.Brush);
     Canvas.RoundRect(ToLocal(FPoints[0]).X, ToLocal(FPoints[0]).Y,
                      ToLocal(FPoints[1]).X, ToLocal(FPoints[1]).Y,
                      FRounding, FRounding);
+    if FSelected then
+      DrawSelection(APaintSpace);
   end;
 end;
 
