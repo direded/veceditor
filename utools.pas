@@ -36,6 +36,7 @@ type
     class procedure CleanParamsPanel(APanel: TWinControl);
     procedure SetParamColor(AFigureColors: TFigureColors); virtual;
     procedure SetParamsPanel(APanel: TPanel); virtual;
+    procedure CleanUp; virtual;
     procedure MouseDown(APoint: TDoublePoint; AShift: TShiftState); virtual; abstract;
     procedure MouseMove(APoint: TDoublePoint; AShift: TShiftState); virtual; abstract;
   	procedure MouseUp(APoint:TDoublePoint; AShift: TShiftState); virtual; abstract;
@@ -71,6 +72,7 @@ type
       CLICK_SIZE: Integer = 3;
   public
   	constructor Create;
+    procedure CleanUp; override;
     procedure MouseDown(APoint: TDoublePoint; AShift: TShiftState); override;
     procedure MouseMove(APoint: TDoublePoint; AShift: TShiftState); override;
   	procedure MouseUp(APoint:TDoublePoint; AShift: TShiftState); override;
@@ -195,11 +197,22 @@ begin
 
 end;
 
+procedure TTool.CleanUp;
+begin
+
+end;
+
 constructor TSelectTool.Create;
 begin
   inherited Create;
   FMetadata.Name:= 'Select';
   FMetadata.Bitmap.LoadFromFile('src/select_tool.bmp');
+end;
+
+procedure TSelectTool.CleanUp;
+begin
+  FFigures.UnSelectAllFigures;
+  FPaintSpace.PaintBox.Invalidate;
 end;
 
 procedure TSelectTool.MouseDown(APoint: TDoublePoint; AShift: TShiftState);

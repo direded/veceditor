@@ -228,6 +228,7 @@ end;
 
 procedure TMainForm.ToolBtnClick(Sender: TObject);
 begin
+  CurrentTool.Tool.CleanUp;
   CurrentTool.Tool:= Tools[(Sender as TBitBtn).Tag];
   TTool.CleanParamsPanel(ToolParamsPanel);
   CurrentTool.Tool.SetParamsPanel(ToolParamsPanel);
