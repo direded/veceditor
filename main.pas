@@ -366,7 +366,7 @@ end;
 
 initialization
 	Figures:= TFigures.Create;
-  CurrentTool.Tool:= Tools[2];
+  CurrentTool.Tool:= Tools[0];
   CurrentTool.FigureColors:= MakeFigureColors(clBlack, clWhite);
   CurrentTool.State:= ctsReady;
   ColorPalette:= MakeDefaultPalette;
