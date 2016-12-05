@@ -68,6 +68,8 @@ type
   private
     FFirstPoint: TDoublePoint;
     FSplitOff: TRectSplitOffFigure;
+    FIsFirstOnFigure: Boolean;
+    FLastPoint: TDoublePoint;
     const
       CLICK_SIZE: Integer = 3;
   public
@@ -218,21 +220,31 @@ end;
 procedure TSelectTool.MouseDown(APoint: TDoublePoint; AShift: TShiftState);
 begin
   FFirstPoint:= APoint;
+  FLastPoint:= APoint;
   FSplitOff:= TRectSplitOffFigure.Create;
   FSplitOff.Points[0]:= APoint;
   FSplitOff.Points[1]:= APoint;
   FFigures.AddFigure(FSplitOff);
+  FIsFirstOnFigure:= false;
+  if FFigures.GetFigure(FFirstPoint) <> nil then
+    FIsFirstOnFigure:= FFigures.GetFigure(FFirstPoint).Selected;
 end;
 
 procedure TSelectTool.MouseMove(APoint: TDoublePoint; AShift: TShiftState);
 begin
-  if (FFirstPoint - APoint).Length <= CLICK_SIZE then Exit;
+  if FIsFirstOnFigure then begin
+      FFigures.MoveSelected(APoint-FLastPoint);
+      FLastPoint:= APoint;
+      Exit;
+  end;
+  if ((FFirstPoint - APoint).Length <= CLICK_SIZE) then Exit;
   FSplitOff.Points[1]:= APoint;
 end;
 
 procedure TSelectTool.MouseUp(APoint: TDoublePoint; AShift: TShiftState);
 begin
   FFigures.RemoveLastFigure;
+  if FIsFirstOnFigure then Exit;
   if (FFirstPoint-APoint).Length > CLICK_SIZE then begin
     if FFirstPoint.X<APoint.X then begin
       if not (ssShift in AShift) then

@@ -29,6 +29,7 @@ type
     function IsFullInRect(A, B: TDoublePoint): Boolean; virtual; abstract;
     function IsPartInRect(A, B: TDoublePoint): Boolean; virtual; abstract;
     function IsValid: Boolean; virtual; abstract;
+    procedure Move(AValue: TDoublePoint);
     procedure SetPointsLength(ALength: Integer);
     procedure IncreasePointsLength;
     procedure Bake; virtual;
@@ -116,10 +117,13 @@ type
     property OnFigureAdd: TEventHandler read FFigureAddEvent write FFigureAddEvent;
     constructor Create;
     function SelectFigure(APoint: TDoublePoint): TFigure;
+    function GetFigure(APoint: TDoublePoint): TFigure;
     function ReverseSelectFigure(APoint: TDoublePoint): TFigure;
     procedure SpaceSelectFullFigures(A, B: TDoublePoint);
     procedure SpaceSelectPartFigures(A, B: TDoublePoint);
     procedure UnSelectAllFigures;
+    function CanSelectFigure(APoint: TDoublePoint): Boolean;
+    procedure MoveSelected(AValue: TDoublePoint);
     procedure AddFigure(AFigure: TFigure);
     function RemoveFigure(AElementID: Longint): Boolean;
     function RemoveLastFigure: Boolean;
@@ -157,6 +161,16 @@ end;
 procedure TFigure.IncreasePointsLength;
 begin
   SetLength(FPoints, Length(FPoints)+1);
+end;
+
+procedure TFigure.Move(AValue: TDoublePoint);
+var
+  i: Integer;
+begin
+  for i:= 0 to High(FPoints) do
+    FPoints[i]+= AValue;
+  FBounds[0]+= AValue;
+  FBounds[1]+= AValue;
 end;
 
 procedure TFigure.SetPointsLength(ALength: Integer);
@@ -453,6 +467,17 @@ begin
   Result:= nil;
 end;
 
+function TFigures.GetFigure(APoint: TDoublePoint): TFigure;
+var
+  i: Integer;
+begin
+for i:= High(FContent) downto 0 do
+    if FContent[i].IsPointInclude(APoint) then begin
+      Exit(FContent[i]);
+    end;
+  Result:= nil;
+end;
+
 function TFigures.ReverseSelectFigure(APoint: TDoublePoint): TFigure;
 var
     i: Integer;
@@ -490,6 +515,24 @@ var
 begin
   for i:= 0 to High(FIsSelected) do
     FIsSelected[i]:= false;
+end;
+
+function TFigures.CanSelectFigure(APoint: TDoublePoint): Boolean;
+var
+    i: Integer;
+begin
+  for i:= High(FContent) downto 0 do
+    if FContent[i].IsPointInclude(APoint) then
+      Exit(true);
+  Result:= false;
+end;
+
+procedure TFigures.MoveSelected(AValue: TDoublePoint);
+var
+  f: TFigure;
+begin
+  for f in FContent do
+    if f.Selected then f.Move(AValue);
 end;
 
 procedure TFigures.AddFigure(AFigure: TFigure);
