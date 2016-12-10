@@ -40,12 +40,12 @@ type
   function MakeFigureColors(Pen, Brush: TColor): TFigureColors;
 
   operator =(A, B: TPenParams): Boolean;
-  procedure SetParams(PenParams: TPenParams; Pen: TPen);
-  function GetParams(Pen: TPen): TPenParams;
+  procedure SetCanvasParams(PenParams: TPenParams; Pen: TPen);
+  function GetCanvasParams(Pen: TPen): TPenParams;
 
   operator =(A, B: TBrushParams): Boolean;
-  procedure SetParams(BrushParams: TBrushParams; Brush: TBrush);
-  function GetParams(Brush: TBrush): TBrushParams;
+  procedure SetCanvasParams(BrushParams: TBrushParams; Brush: TBrush);
+  function GetCanvasParams(Brush: TBrush): TBrushParams;
 
 implementation
 
@@ -60,14 +60,14 @@ begin
   Result:= (A.Color = B.Color) and (A.Style = B.Style) and (A.Width = B.Width);
 end;
 
-procedure SetParams(PenParams: TPenParams; Pen: TPen);
+procedure SetCanvasParams(PenParams: TPenParams; Pen: TPen);
 begin
   Pen.Width:= PenParams.Width;
   Pen.Style:= PenParams.Style;
   Pen.Color:= PenParams.Color;
 end;
 
-function GetParams(Pen: TPen): TPenParams;
+function GetCanvasParams(Pen: TPen): TPenParams;
 begin
   Result.Style:= Pen.Style;
   Result.Color:= Pen.Color;
@@ -79,13 +79,13 @@ begin
   Result:= (A.Color = B.Color) and (A.Style = B.Style);
 end;
 
-procedure SetParams(BrushParams: TBrushParams; Brush: TBrush);
+procedure SetCanvasParams(BrushParams: TBrushParams; Brush: TBrush);
 begin
   Brush.Style:= BrushParams.Style;
   Brush.Color:= BrushParams.Color;
 end;
 
-function GetParams(Brush: TBrush): TBrushParams;
+function GetCanvasParams(Brush: TBrush): TBrushParams;
 begin
   Result.Style:= Brush.Style;
   Result.Color:= Brush.Color;

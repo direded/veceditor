@@ -18,9 +18,11 @@ type
     FBounds: TTwoDoublePointsArray;
     FPoints: TDoublePointArray;
     FSelected: Boolean;
+    procedure SetFigureParams(ACanvas: TCanvas); virtual; abstract;
+    procedure DrawRaw(APaintSpace: TPaintSpace); virtual; abstract;
     class procedure SetSelectionEllipseParams(APen: TPen; ABrush: TBrush);
     procedure DrawSelection(APaintSpace: TPaintSpace); virtual; abstract;
-    procedure SetSelectionParams(APen: TPen; ABrush: TBrush); virtual; abstract;
+    procedure SetSelectionParams(ACanvas:TCanvas); virtual; abstract;
   public
     property Points: TDoublePointArray read FPoints write FPoints;
     property Bounds: TTwoDoublePointsArray read FBounds;
@@ -33,7 +35,7 @@ type
     procedure SetPointsLength(ALength: Integer);
     procedure IncreasePointsLength;
     procedure Bake; virtual;
-    procedure Draw(APaintSpace: TPaintSpace); virtual; abstract;
+    procedure Draw(APaintSpace: TPaintSpace); virtual;
   end;
 
   TSelectionChangeProcedure = procedure(AFigure: TFigure) of object;
@@ -42,8 +44,10 @@ type
   TLineFigure = class(TFigure)
   strict protected
     FPenParams: TPenParams;
+    procedure SetSelectionParams(ACanvas: TCanvas); override;
     procedure DrawSelection(APaintSpace: TPaintSpace); override;
-    procedure SetSelectionParams(APen: TPen; ABrush: TBrush); override;
+    procedure SetFigureParams(ACanvas: TCanvas); override;
+    procedure DrawRaw(APaintSpace: TPaintSpace); override;
   public
     property PenParams: TPenParams read FPenParams write FPenParams;
     constructor Create;
@@ -51,13 +55,13 @@ type
     function IsFullInRect(A, B: TDoublePoint): Boolean; override;
     function IsPartInRect(A, B: TDoublePoint): Boolean; override;
     function IsValid: Boolean; override;
-    procedure Draw(APaintSpace: TPaintSpace); override;
   end;
 
   TShapeFigure = class(TLineFigure)
   strict protected
     FBrushParams: TBrushParams;
-    procedure SetSelectionParams(APen: TPen; ABrush: TBrush); override;
+    procedure SetSelectionParams(ACanvas: TCanvas); override;
+    procedure SetFigureParams(ACanvas: TCanvas); override;
   public
     constructor Create;
     function IsPartInRect(A, B: TDoublePoint): Boolean; override;
@@ -68,18 +72,18 @@ type
   TRectFigure = class(TShapeFigure)
   public
     constructor Create;
+    procedure DrawRaw(APaintSpace: TPaintSpace); override;
     function IsPointInclude(APoint: TDoublePoint): Boolean; override;
-    procedure Draw(APaintSpace: TPaintSpace); override;
   end;
 
   TPolygonFigure = class(TShapeFigure)
   strict protected
     procedure DrawSelection(APaintSpace: TPaintSpace); override;
+    procedure DrawRaw(APaintSpace: TPaintSpace); override;
   public
     constructor Create;
     function IsValid: Boolean; override;
-    function IsPointInclude(APoint: TDoublePoint): Boolean; override;
-    procedure Draw(APaintSpace: TPaintSpace); override;
+    function IsPointInclude(APoint: TDoublePoint): Boolean; override; // Doesn't work this nonregular polygons! Need to fix!
   end;
 
   TRectSplitOffFigure = class(TRectFigure)
@@ -92,20 +96,22 @@ type
   TEllipseFigure = class(TShapeFigure)
   strict protected
     procedure DrawSelection(APaintSpace: TPaintSpace); override;
+    procedure DrawRaw(APaintSpace: TPaintSpace); override;
 	public
     constructor Create;
     function IsPointInclude(APoint: TDoublePoint): Boolean; override;
-    procedure Draw(APaintSpace: TPaintSpace); override;
   end;
 
   TRoundedRectFigure = class(TShapeFigure)
-  private
+  strict private
     FRounding: Integer;
+  strict protected
+    procedure DrawSelection(APaintSpace: TPaintSpace); override;
+    procedure DrawRaw(APaintSpace: TPaintSpace); override;
 	public
     property Rounding: Integer read FRounding write FRounding;
     constructor Create;
     function IsPointInclude(APoint: TDoublePoint): Boolean; override;
-    procedure Draw(APaintSpace: TPaintSpace); override;
   end;
 
   TFigures = class
@@ -191,6 +197,18 @@ begin
     SetBounds(FBounds, P);
 end;
 
+procedure TFigure.Draw(APaintSpace: TPaintSpace);
+begin
+  with APaintSpace do begin
+    SetFigureParams(Canvas);
+    if FSelected then
+      SetSelectionParams(Canvas);
+    DrawRaw(APaintSpace);
+    if FSelected then
+      DrawSelection(APaintSpace);
+  end;
+end;
+
 procedure TLineFigure.DrawSelection(APaintSpace: TPaintSpace);
 begin
   with APaintSpace do begin
@@ -200,9 +218,21 @@ begin
   end;
 end;
 
-procedure TLineFigure.SetSelectionParams(APen: TPen; ABrush: TBrush);
+procedure TLineFigure.SetSelectionParams(ACanvas: TCanvas);
 begin
-  APen.Width:= APen.Width+1;
+  ACanvas.Pen.Width:= ACanvas.Pen.Width+1;
+end;
+
+
+
+procedure TLineFigure.SetFigureParams(ACanvas: TCanvas);
+begin
+  SetCanvasParams(FPenParams, ACanvas.Pen);
+end;
+
+procedure TLineFigure.DrawRaw(APaintSpace: TPaintSpace);
+begin
+  APaintSpace.Canvas.Polyline(APaintSpace.ToLocal(FPoints));
 end;
 
 constructor TLineFigure.Create;
@@ -249,22 +279,16 @@ begin
   Result:= (Length(FPoints)>=2);
 end;
 
-procedure TLineFigure.Draw(APaintSpace: TPaintSpace);
+procedure TShapeFigure.SetSelectionParams(ACanvas: TCanvas);
 begin
-  with APaintSpace do begin
-    SetParams(FPenParams, Canvas.Pen);
-    if FSelected then
-      SetSelectionParams(Canvas.Pen, Canvas.Brush);
-    Canvas.Polyline(ToLocal(FPoints));
-    if FSelected then
-      DrawSelection(APaintSpace);
-  end;
+  ACanvas.Pen.Width:= ACanvas.Pen.Width+1;
+  ACanvas.Brush.Color:= ColorToRGB(ACanvas.Brush.Color)-$101010;
 end;
 
-procedure TShapeFigure.SetSelectionParams(APen: TPen; ABrush: TBrush);
+procedure TShapeFigure.SetFigureParams(ACanvas: TCanvas);
 begin
-  APen.Width:= APen.Width+1;
-  ABrush.Color:= ColorToRGB(ABrush.Color)-$101010;
+  SetCanvasParams(FPenParams, ACanvas.Pen);
+  SetCanvasParams(FBrushParams, ACanvas.Brush);
 end;
 
 function TShapeFigure.IsPartInRect(A, B: TDoublePoint): Boolean;
@@ -293,26 +317,19 @@ begin
   inherited Create;
 end;
 
+procedure TRectFigure.DrawRaw(APaintSpace: TPaintSpace);
+begin
+  with APaintSpace do
+    Canvas.Rectangle(ToLocal(FPoints[0]).X, ToLocal(FPoints[0]).Y,
+                     ToLocal(FPoints[1]).X, ToLocal(FPoints[1]).Y);
+end;
+
 function TRectFigure.IsPointInclude(APoint: TDoublePoint): Boolean;
 begin
   if (FBounds[0].X<=APoint.X) and (APoint.X<=FBounds[1].X) and
     (FBounds[0].Y<=APoint.Y) and (APoint.Y<=FBounds[1].Y) then
     Exit(true);
   Exit(false);
-end;
-
-procedure TRectFigure.Draw(APaintSpace: TPaintSpace);
-begin
-  with APaintSpace do begin
-    SetParams(FPenParams, Canvas.Pen);
-    SetParams(FBrushParams, Canvas.Brush);
-    if FSelected then
-      SetSelectionParams(Canvas.Pen, Canvas.Brush);
-    Canvas.Rectangle(ToLocal(FPoints[0]).X, ToLocal(FPoints[0]).Y,
-                     ToLocal(FPoints[1]).X, ToLocal(FPoints[1]).Y);
-    if FSelected then
-      DrawSelection(APaintSpace);
-  end;
 end;
 
 procedure TPolygonFigure.DrawSelection(APaintSpace: TPaintSpace);
@@ -324,6 +341,11 @@ begin
     for p in FPoints do
       Canvas.EllipseC(ToLocal(p).X, ToLocal(p).Y, 3, 3);
   end;
+end;
+
+procedure TPolygonFigure.DrawRaw(APaintSpace: TPaintSpace);
+begin
+  APaintSpace.Canvas.Polygon(APaintSpace.ToLocal(FPoints));
 end;
 
 constructor TPolygonFigure.Create;
@@ -347,19 +369,6 @@ begin
   Result:= true;
 end;
 
-procedure TPolygonFigure.Draw(APaintSpace: TPaintSpace);
-begin
-  with APaintSpace do begin
-    SetParams(FPenParams, Canvas.Pen);
-    SetParams(FBrushParams, Canvas.Brush);
-    if FSelected then
-      SetSelectionParams(Canvas.Pen, Canvas.Brush);
-    Canvas.Polygon(ToLocal(Points));
-    if FSelected then
-      DrawSelection(APaintSpace);
-  end;
-end;
-
 constructor TRectSplitOffFigure.Create;
 begin
   inherited Create;
@@ -374,7 +383,7 @@ end;
 procedure TRectSplitOffFigure.Draw(APaintSpace: TPaintSpace);
 begin
   with APaintSpace do begin
-    SetParams(FPenParams, Canvas.Pen);
+    SetCanvasParams(FPenParams, Canvas.Pen);
     Canvas.Frame(ToLocal(FPoints[0]).X, ToLocal(FPoints[0]).Y,
                  ToLocal(FPoints[1]).X, ToLocal(FPoints[1]).Y);
   end;
@@ -394,6 +403,13 @@ begin
     Canvas.EllipseC(ToLocal(FBounds[0]).X, ToLocal(middle).Y, 3, 3);
     Canvas.EllipseC(ToLocal(FBounds[1]).X, ToLocal(middle).Y, 3, 3);
   end;
+end;
+
+procedure TEllipseFigure.DrawRaw(APaintSpace: TPaintSpace);
+begin
+  with APaintSpace do
+    Canvas.Ellipse(ToLocal(FPoints[0]).X, ToLocal(FPoints[0]).Y,
+                   ToLocal(FPoints[1]).X, ToLocal(FPoints[1]).Y);
 end;
 
 constructor TEllipseFigure.Create;
@@ -422,18 +438,16 @@ begin
   Exit(false);
 end;
 
-procedure TEllipseFigure.Draw(APaintSpace: TPaintSpace);
+procedure TRoundedRectFigure.DrawSelection(APaintSpace: TPaintSpace);
 begin
-  with APaintSpace do begin
-    SetParams(FPenParams, Canvas.Pen);
-    SetParams(FBrushParams, Canvas.Brush);
-    if FSelected then
-      SetSelectionParams(Canvas.Pen, Canvas.Brush);
-    Canvas.Ellipse(ToLocal(FPoints[0]).X, ToLocal(FPoints[0]).Y,
-                   ToLocal(FPoints[1]).X, ToLocal(FPoints[1]).Y);
-    if FSelected then
-      DrawSelection(APaintSpace);
-  end;
+
+end;
+
+procedure TRoundedRectFigure.DrawRaw(APaintSpace: TPaintSpace);
+begin
+  with APaintSpace do
+    Canvas.RoundRect(ToLocal(FPoints[0]).X, ToLocal(FPoints[0]).Y,
+                     ToLocal(FPoints[1]).X, ToLocal(FPoints[1]).Y, FRounding, FRounding);
 end;
 
 constructor TRoundedRectFigure.Create;
@@ -446,21 +460,6 @@ begin
   Result :=
     InRange(APoint.X, FBounds[0].X, FBounds[1].X) and
     InRange(APoint.Y, FBounds[0].Y, FBounds[1].Y);
-end;
-
-procedure TRoundedRectFigure.Draw(APaintSpace: TPaintSpace);
-begin
-  with APaintSpace do begin
-    SetParams(FPenParams, Canvas.Pen);
-    SetParams(FBrushParams, Canvas.Brush);
-    if FSelected then
-      SetSelectionParams(Canvas.Pen, Canvas.Brush);
-    Canvas.RoundRect(ToLocal(FPoints[0]).X, ToLocal(FPoints[0]).Y,
-                     ToLocal(FPoints[1]).X, ToLocal(FPoints[1]).Y,
-                     FRounding, FRounding);
-    if FSelected then
-      DrawSelection(APaintSpace);
-  end;
 end;
 
 constructor TFigures.Create;
