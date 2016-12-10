@@ -430,10 +430,9 @@ end;
 
 function TRoundedRectFigure.IsPointInclude(APoint: TDoublePoint): Boolean;
 begin
-  if (FBounds[0].X<=APoint.X) and (APoint.X<=FBounds[1].X) and
-    (FBounds[0].Y<=APoint.Y) and (APoint.Y<=FBounds[1].Y) then
-    Exit(true);
-  Exit(false);
+  Result :=
+    InRange(APoint.X, FBounds[0].X, FBounds[1].X) and
+    InRange(APoint.Y, FBounds[0].Y, FBounds[1].Y);
 end;
 
 procedure TRoundedRectFigure.Draw(APaintSpace: TPaintSpace);
