@@ -70,6 +70,8 @@ type
     FSplitOff: TRectSplitOffFigure;
     FIsFirstOnFigure: Boolean;
     FLastPoint: TDoublePoint;
+    procedure FRevers(AFigure: TFigure);
+    procedure FSelect(AFigure: TFigure);
     procedure FSelectAllBtnClick(Sender: TObject);
     const
       CLICK_SIZE: Integer = 3;
@@ -206,6 +208,16 @@ begin
 
 end;
 
+procedure TSelectTool.FRevers(AFigure: TFigure);
+begin
+  AFigure.Selected:= not AFigure.Selected;
+end;
+
+procedure TSelectTool.FSelect(AFigure: TFigure);
+begin
+  AFigure.Selected:= true;
+end;
+
 procedure TSelectTool.FSelectAllBtnClick(Sender: TObject);
 begin
   FFigures.SelectAllFigures;
@@ -262,22 +274,33 @@ begin
   if FIsFirstOnFigure then Exit;
   if (FFirstPoint-APoint).Length > CLICK_SIZE then begin
     if FFirstPoint.X<APoint.X then begin
-      if not (ssShift in AShift) then
-        Figures.UnSelectAllFigures;
-      Figures.SpaceSelectFullFigures(FFirstPoint, APoint)
-    end else begin
-      if not (ssShift in AShift) then
-        Figures.UnSelectAllFigures;
-      Figures.SpaceSelectPartFigures(FFirstPoint, APoint);
+      if ssShift in AShift then
+        FFigures.SetSelectionFullRectFigures(FFirstPoint, APoint, @FSelect)
+      else if ssCtrl in AShift then
+        FFigures.SetSelectionFullRectFigures(FFirstPoint, APoint, @FRevers)
+      else begin
+        FFigures.UnSelectAllFigures;
+        FFigures.SetSelectionFullRectFigures(FFirstPoint, APoint, @FSelect)
       end;
-  end else begin
-    if ssCtrl in AShift then
-      Figures.ReverseSelectFigure(APoint)
-    else if ssShift in AShift then
-      FFigures.SelectFigure(APoint)
+    end else begin
+      if ssShift in AShift then
+        FFigures.SetSelectionPartRectFigures(FFirstPoint, APoint, @FSelect)
+      else if ssCtrl in AShift then
+        FFigures.SetSelectionPartRectFigures(FFirstPoint, APoint, @FRevers)
+      else begin
+        FFigures.UnSelectAllFigures;
+        FFigures.SetSelectionPartRectFigures(FFirstPoint, APoint, @FSelect)
+      end;
+    end;
+  end
+  else begin
+    if ssShift in AShift then
+      FFigures.SetSelectionFigure(APoint, @FSelect)
+    else if ssCtrl in AShift then
+      FFigures.SetSelectionFigure(APoint, @FRevers)
     else begin
       FFigures.UnSelectAllFigures;
-      FFigures.SelectFigure(APoint);
+      FFigures.SetSelectionFigure(APoint, @FSelect);
     end;
   end;
 end;

@@ -36,6 +36,7 @@ type
     procedure Draw(APaintSpace: TPaintSpace); virtual; abstract;
   end;
 
+  TSelectionChangeProcedure = procedure(AFigure: TFigure) of object;
   TFigureArray = array of TFigure;
 
   TLineFigure = class(TFigure)
@@ -59,6 +60,7 @@ type
     procedure SetSelectionParams(APen: TPen; ABrush: TBrush); override;
   public
     constructor Create;
+    function IsPartInRect(A, B: TDoublePoint): Boolean; override;
     property BrushParams: TBrushParams read FBrushParams write FBrushParams;
     function IsValid: Boolean; override;
   end;
@@ -109,18 +111,18 @@ type
   TFigures = class
  	strict private
     FContent: TFigureArray;
-    FIsSelected: array of Boolean;
     FFigureAddEvent: TEventHandler;
     FBounds: TDoubleRect;
     procedure SetBounds;
   public
     property OnFigureAdd: TEventHandler read FFigureAddEvent write FFigureAddEvent;
     constructor Create;
-    function SelectFigure(APoint: TDoublePoint): TFigure;
+    procedure SetSelectionFigure(APoint: TDoublePoint; AChangeSelection: TSelectionChangeProcedure);
+    procedure SetSelectionFullRectFigures(A, B: TDoublePoint; AChangeSelection: TSelectionChangeProcedure);
+    procedure SetSelectionPartRectFigures(A, B: TDoublePoint; AChangeSelection: TSelectionChangeProcedure);
     function GetFigure(APoint: TDoublePoint): TFigure;
-    function ReverseSelectFigure(APoint: TDoublePoint): TFigure;
-    procedure SpaceSelectFullFigures(A, B: TDoublePoint);
-    procedure SpaceSelectPartFigures(A, B: TDoublePoint);
+    function GetFullRectFigures(A, B: TDoublePoint): TFigureArray;
+    function GetPartRectFigures(A, B: TDoublePoint): TFigureArray;
     procedure SelectAllFigures;
     procedure UnSelectAllFigures;
     function CanSelectFigure(APoint: TDoublePoint): Boolean;
@@ -225,8 +227,8 @@ var
   p: TDoublePoint;
 begin
   for p in FPoints do
-    if not ((Min(A.X, B.X) <= p.X) and (p.X <= Max(A.X, B.X)) and
-      (Min(A.Y, B.Y) <= p.Y) and (p.Y <= Max(A.Y, B.Y))) then
+    if not InRange(p.X, Min(A.X, B.X), Max(A.X, B.X)) and
+      InRange(p.Y, Min(A.Y, B.Y), Max(A.Y, B.Y)) then
       Exit(false);
   Exit(true);
 end;
@@ -236,8 +238,8 @@ var
   p: TDoublePoint;
 begin
   for p in FPoints do
-    if (Min(A.X, B.X) <= p.X) and (p.X <= Max(A.X, B.X)) and
-      (Min(A.Y, B.Y) <= p.Y) and (p.Y <= Max(A.Y, B.Y)) then
+    if InRange(p.X, Min(A.X, B.X), Max(A.X, B.X)) and
+      InRange(p.Y, Min(A.Y, B.Y), Max(A.Y, B.Y)) then
       Exit(true);
   Exit(false);
 end;
@@ -263,6 +265,17 @@ procedure TShapeFigure.SetSelectionParams(APen: TPen; ABrush: TBrush);
 begin
   APen.Width:= APen.Width+1;
   ABrush.Color:= ColorToRGB(ABrush.Color)-$101010;
+end;
+
+function TShapeFigure.IsPartInRect(A, B: TDoublePoint): Boolean;
+var
+  p: TDoublePoint;
+begin
+  for p in FBounds do
+    if InRange(p.X, Min(A.X, B.X), Max(A.X, B.X)) and
+      InRange(p.Y, Min(A.Y, B.Y), Max(A.Y, B.Y)) then
+      Exit(true);
+  Exit(false);
 end;
 
 constructor TShapeFigure.Create;
@@ -393,8 +406,8 @@ var
   F1, F2, L, R, O: TDoublePoint;
   c: Double;
 begin
-  L:= GetDoublePoint(Min(FPoints[0].X, FPoints[1].X), Min(FPoints[0].Y, FPoints[1].Y));
-  R:= GetDoublePoint(Max(FPoints[0].X, FPoints[1].X), Max(FPoints[0].Y, FPoints[1].Y));
+  L:= FBounds[0];
+  R:= FBounds[1];
   O:= L+(R-L)/2;
   APoint:= APoint-O; L:= L-O; R:= R-O;
   if R.X-L.X > R.Y-L.Y then begin
@@ -455,16 +468,33 @@ begin
 	FContent:= nil
 end;
 
-function TFigures.SelectFigure(APoint: TDoublePoint): TFigure;
+procedure TFigures.SetSelectionFigure(APoint: TDoublePoint; AChangeSelection: TSelectionChangeProcedure);
 var
-    i: Integer;
+  i: Integer;
 begin
   for i:= High(FContent) downto 0 do
     if FContent[i].IsPointInclude(APoint) then begin
-      FIsSelected[i]:= true;
-      Exit(FContent[i]);
+      AChangeSelection(FContent[i]);
+      Exit;
     end;
-  Result:= nil;
+end;
+
+procedure TFigures.SetSelectionFullRectFigures(A, B: TDoublePoint; AChangeSelection: TSelectionChangeProcedure);
+var
+  i: Integer;
+begin
+  for i:= High(FContent) downto 0 do
+    if FContent[i].IsFullInRect(A, B) then
+      AChangeSelection(FContent[i]);
+end;
+
+procedure TFigures.SetSelectionPartRectFigures(A, B: TDoublePoint; AChangeSelection: TSelectionChangeProcedure);
+var
+  i: Integer;
+begin
+  for i:= High(FContent) downto 0 do
+    if FContent[i].IsPartInRect(A, B) then
+      AChangeSelection(FContent[i]);
 end;
 
 function TFigures.GetFigure(APoint: TDoublePoint): TFigure;
@@ -478,51 +508,42 @@ for i:= High(FContent) downto 0 do
   Result:= nil;
 end;
 
-function TFigures.ReverseSelectFigure(APoint: TDoublePoint): TFigure;
+function TFigures.GetFullRectFigures(A, B: TDoublePoint): TFigureArray;      // COMMON CODE (#01)
 var
-    i: Integer;
+  f: TFigure;
 begin
-  for i:= High(FContent) downto 0 do
-    if FContent[i].IsPointInclude(APoint) then begin
-      FIsSelected[i]:= not FIsSelected[i];
-      Exit(FContent[i]);
+  for f in FContent do
+    if f.IsFullInRect(A, B) then begin
+      SetLength(Result, Length(Result)+1);
+      Result[High(Result)]:= f;
     end;
-  Result:= nil;
 end;
 
-procedure TFigures.SpaceSelectFullFigures(A, B: TDoublePoint);
+function TFigures.GetPartRectFigures(A, B: TDoublePoint): TFigureArray;      // COMMON CODE (#01)
 var
-  i: Integer;
+  f: TFigure;
 begin
-  write('Triggered');
-  for i:= High(FContent) downto 0 do
-    if FContent[i].IsFullInRect(A, B) then
-      FIsSelected[i]:= true;
-end;
-
-procedure TFigures.SpaceSelectPartFigures(A, B: TDoublePoint);
-var
-  i: Integer;
-begin
-  for i:= High(FContent) downto 0 do
-    if FContent[i].IsPartInRect(A, B) then
-      FIsSelected[i]:= true;
+  for f in FContent do
+    if f.IsPartInRect(A, B) then begin
+      SetLength(Result, Length(Result)+1);
+      Result[High(Result)]:= f;
+    end;
 end;
 
 procedure TFigures.SelectAllFigures;
 var
-  i: Integer;
+  f: TFigure;
 begin
-  for i:= 0 to High(FIsSelected) do
-    FIsSelected[i]:= true;
+  for f in FContent do
+    f.Selected:= true;
 end;
 
 procedure TFigures.UnSelectAllFigures;
 var
-  i: Integer;
+  f: TFigure;
 begin
-  for i:= 0 to High(FIsSelected) do
-    FIsSelected[i]:= false;
+  for f in FContent do
+    f.Selected:= false;
 end;
 
 function TFigures.CanSelectFigure(APoint: TDoublePoint): Boolean;
@@ -547,8 +568,6 @@ procedure TFigures.AddFigure(AFigure: TFigure);
 begin
   SetLength(FContent, Length(FContent)+1);
   FContent[High(FContent)]:= AFigure;
-  SetLength(FIsSelected, Length(FIsSelected)+1);
-  FIsSelected[High(FIsSelected)]:= false;
 end;
 
 procedure TFigures.SetBounds;
@@ -581,7 +600,6 @@ begin
   if(Length(FContent) = 0) then Exit(false);
   FContent[High(FContent)].Free;
   SetLength(FContent, Length(FContent)-1);
-  SetLength(FIsSelected, Length(FIsSelected)-1);
 end;
 
 procedure TFigures.BakeLastFigure;
@@ -609,7 +627,6 @@ begin
     FContent[AElementID]:= FContent[AElementID+1];
   end;
 	SetLength(FContent, Length(FContent)-1);
-  SetLength(FIsSelected, Length(FIsSelected)+1);
   Exit(true);
 end;
 
@@ -617,10 +634,8 @@ procedure TFigures.Draw(APaintSpace: TPaintSpace);
 var
   i: Integer;
 begin
-  for i:= 0 to High(FContent) do begin
-    FContent[i].Selected:= FIsSelected[i];
+  for i:= 0 to High(FContent) do
     FContent[i].Draw(APaintSpace);
-  end;
 end;
 
 destructor TFigures.Destroy;
