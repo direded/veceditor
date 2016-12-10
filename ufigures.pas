@@ -223,8 +223,6 @@ begin
   ACanvas.Pen.Width:= ACanvas.Pen.Width+1;
 end;
 
-
-
 procedure TLineFigure.SetFigureParams(ACanvas: TCanvas);
 begin
   SetCanvasParams(FPenParams, ACanvas.Pen);
@@ -257,8 +255,8 @@ var
   p: TDoublePoint;
 begin
   for p in FPoints do
-    if not InRange(p.X, Min(A.X, B.X), Max(A.X, B.X)) and
-      InRange(p.Y, Min(A.Y, B.Y), Max(A.Y, B.Y)) then
+    if not (InRange(p.X, Min(A.X, B.X), Max(A.X, B.X)) and
+      InRange(p.Y, Min(A.Y, B.Y), Max(A.Y, B.Y))) then
       Exit(false);
   Exit(true);
 end;
