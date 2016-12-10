@@ -4,9 +4,9 @@ unit UTools;
 
 interface
 uses
-	Classes, SysUtils, Controls, FileUtil, Forms, Graphics, Dialogs, Menus,
-  ExtCtrls, Spin, StdCtrls, FPCanvas, UFigures, UDoublePoint, UPaintSpace, Math,
-  UFigureParams, UUtils, UToolParams;
+	Classes, Types, Controls, Graphics,
+  ExtCtrls, StdCtrls, UFigures, UDoublePoint, UPaintSpace, Math,
+  UFigureParams, UToolParams;
 
 type
 
