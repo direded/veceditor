@@ -127,6 +127,7 @@ type
     procedure SetSelectionFullRectFigures(A, B: TDoublePoint; AChangeSelection: TSelectionChangeProcedure);
     procedure SetSelectionPartRectFigures(A, B: TDoublePoint; AChangeSelection: TSelectionChangeProcedure);
     function GetFigure(APoint: TDoublePoint): TFigure;
+    function GetSelectedFigures: TFigureArray;
     function GetFullRectFigures(A, B: TDoublePoint): TFigureArray;
     function GetPartRectFigures(A, B: TDoublePoint): TFigureArray;
     procedure SelectAllFigures;
@@ -503,6 +504,17 @@ for i:= High(FContent) downto 0 do
       Exit(FContent[i]);
     end;
   Result:= nil;
+end;
+
+function TFigures.GetSelectedFigures: TFigureArray;
+var
+  f: TFigure;
+begin
+  for f in FContent do
+    if f.Selected then begin
+      SetLength(Result, Length(Result)+1);
+      Result[High(Result)]:= f;
+    end;
 end;
 
 function TFigures.GetFullRectFigures(A, B: TDoublePoint): TFigureArray;      // COMMON CODE (#01)
