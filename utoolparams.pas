@@ -13,7 +13,7 @@ type
   TDrawItemEvent = procedure(Control: TWinControl; AIndex: Integer; ARect: TRect;
                              AState: TOwnerDrawState) of object;
 
-  TToolParameters = class
+  TToolParam = class
   strict protected
     UISettings: record
       Left: Integer;
@@ -30,19 +30,22 @@ type
   public
     constructor Create;
     procedure SetUISettings(ALeft, ATop: Integer);
-    procedure FillUserInterface(AControl: TWinControl); virtual; abstract;
+    procedure FillUserInterface(AControl: TWinControl);
+    procedure FillUserInterfaceRaw(AControl: TWinControl; var ALeft: Integer); virtual; abstract;
   end;
 
-  TSelectToolParameters = class(TToolParameters)
+  TToolParamArray = array of TToolParam;
+
+  TSelectToolParam = class(TToolParam)
   strict protected
     FSelectAllBtnClick: TParamChangingEvent;
   public
     constructor Create;
     property SelectAllBtnClick: TParamChangingEvent read FSelectAllBtnClick write FSelectAllBtnClick;
-    procedure FillUserInterface(AControl: TWinControl); override;
+    procedure FillUserInterfaceRaw(AControl: TWinControl; var ALeft: Integer); override;
   end;
 
-  TZoomToolParameters = class(TToolParameters)
+  TZoomToolParam = class(TToolParam)
   strict protected
   type
     TZoomModes = (zmtlZoomIn, zmtlZoomOut, zmtlZoomSpace);
@@ -55,10 +58,10 @@ type
     constructor Create;
     property Mode: TZoomModes read FMode write FMode;
     property ZoomPerClick: Double read FZoomPerClick write FZoomPerClick;
-    procedure FillUserInterface(AControl: TWinControl); override;
+    procedure FillUserInterfaceRaw(AControl: TWinControl; var ALeft: Integer); override;
   end;
 
-  TLineToolParameters = class(TToolParameters)
+  TLineToolParam = class(TToolParam)
   strict protected
     FPen: TPenParams;
     procedure FPenStyleChange(Sender: TObject);
@@ -68,10 +71,10 @@ type
   public
     constructor Create;
     property Pen: TPenParams read FPen write FPen;
-    procedure FillUserInterface(AControl: TWinControl); override;
+    procedure FillUserInterfaceRaw(AControl: TWinControl; var ALeft: Integer); override;
   end;
 
-  TShapeToolParameters = class(TLineToolParameters)
+  TShapeToolParam = class(TToolParam)
   strict protected
     FBrush: TBrushParams;
     procedure FBrushStyleChange(Sender: TObject);
@@ -80,33 +83,37 @@ type
   public
     constructor Create;
     property Brush: TBrushParams read FBrush write FBrush;
-    procedure FillUserInterface(AControl: TWinControl); override;
+    procedure FillUserInterfaceRaw(AControl: TWinControl; var ALeft: Integer); override;
   end;
 
-  TRegularPolygonToolParameters = class(TShapeToolParameters)
+  TRegularPolygonToolParam = class(TToolParam)
   strict protected
     FAngleCount: Integer;
     procedure FAngleCountChange(Sender: TObject);
   public
     constructor Create;
     property AngleCount: Integer read FAngleCount write FAngleCount;
-    procedure FillUserInterface(AControl: TWinControl); override;
+    procedure FillUserInterfaceRaw(AControl: TWinControl; var ALeft: Integer); override;
   end;
 
-  TRoundedRectToolParameters = class(TShapeToolParameters)
+  TRoundedRectToolParam = class(TToolParam)
   strict protected
     FRounding: Integer;
     procedure FRoundingChange(Sender: TObject);
   public
     constructor Create;
     property Rounding: Integer read FRounding write FRounding;
-    procedure FillUserInterface(AControl: TWinControl); override;
+    procedure FillUserInterfaceRaw(AControl: TWinControl; var ALeft: Integer); override;
   end;
 
+  procedure RegisterToolParam(AParam: TToolParam);
+
+var
+  ToolParams: TToolParamArray;
 
 implementation
 
-class function TToolParameters.CreateComboBox(AOwner: TWinControl; APoint: TPoint; AItems: array of String;
+class function TToolParam.CreateComboBox(AOwner: TWinControl; APoint: TPoint; AItems: array of String;
                                               AStartValue: Integer; AEvent: TParamChangingEvent): TComboBox;
 var
   str: String;
@@ -126,7 +133,7 @@ begin
   end;
 end;
 
-class function TToolParameters.CreateComboBox(AOwner: TWinControl; APoint: TPoint; AItemCount: Integer; AStartValue: Integer;
+class function TToolParam.CreateComboBox(AOwner: TWinControl; APoint: TPoint; AItemCount: Integer; AStartValue: Integer;
                                               ADrawItemEvent: TDrawItemEvent; AChangingEvent: TParamChangingEvent): TComboBox;
 var
   i: Integer;
@@ -148,7 +155,7 @@ begin
   end;
 end;
 
-class function TToolParameters.CreateSpinEdit(AOwner: TWinControl; APoint: TPoint; AMin, AMax: Integer;
+class function TToolParam.CreateSpinEdit(AOwner: TWinControl; APoint: TPoint; AMin, AMax: Integer;
                                               AStartValue: Integer; AEvent: TParamChangingEvent): TSpinEdit;
 begin
   Result:= TSpinEdit.Create(AOwner);
@@ -164,7 +171,7 @@ begin
   end;
 end;
 
-class function TToolParameters.CreateFloatSpinEdit(AOwner: TWinControl; APoint: TPoint; AMin, AMax: Double;
+class function TToolParam.CreateFloatSpinEdit(AOwner: TWinControl; APoint: TPoint; AMin, AMax: Double;
                                               AStartValue: Double; AEvent: TParamChangingEvent): TFloatSpinEdit;
 begin
   Result:= TFloatSpinEdit.Create(AOwner);
@@ -180,75 +187,87 @@ begin
   end;
 end;
 
-constructor TToolParameters.Create;
+constructor TToolParam.Create;
 begin
   UISettings.Left:= 5;
   UISettings.Top:= 8;
 end;
 
-procedure TToolParameters.SetUISettings(ALeft, ATop: Integer);
+procedure TToolParam.SetUISettings(ALeft, ATop: Integer);
 begin
   UISettings.Left:= ALeft;
   UISettings.Top:= ATop;
 end;
 
-constructor TSelectToolParameters.Create;
+procedure TToolParam.FillUserInterface(AControl: TWinControl);
+var
+  CurrentLeft: Integer;
+begin
+  if AControl.ControlCount>0 then
+    with AControl.Controls[AControl.ControlCount-1] do
+      CurrentLeft:= Left+Width+UISettings.Left
+  else
+    CurrentLeft:= UISettings.Left;
+  FillUserInterfaceRaw(AControl, CurrentLeft);
+end;
+
+constructor TSelectToolParam.Create;
 begin
   inherited Create;
 end;
 
-procedure TSelectToolParameters.FillUserInterface(AControl: TWinControl);
+procedure TSelectToolParam.FillUserInterfaceRaw(AControl: TWinControl; var ALeft: Integer);
 var
   Btn: TButton;
 begin
   Btn:= TButton.Create(AControl);
   Btn.Parent:= AControl;
-  Btn.Left:= UISettings.Left;
+  Btn.Left:= ALeft;
   Btn.Top:= UISettings.Top;
   Btn.Caption:= 'Select all';
   Btn.OnClick:= FSelectAllBtnClick;
 end;
 
-procedure TZoomToolParameters.FModeChange(Sender: TObject);
+procedure TZoomToolParam.FModeChange(Sender: TObject);
 begin
   FMode:= TZoomModes(TComboBox(Sender).ItemIndex);
 end;
 
-procedure TZoomToolParameters.FZoomPerClickChange(Sender: TObject);
+procedure TZoomToolParam.FZoomPerClickChange(Sender: TObject);
 begin
   FZoomPerClick:= TFloatSpinEdit(Sender).Value;
 end;
 
-constructor TZoomToolParameters.Create;
+constructor TZoomToolParam.Create;
 begin
   inherited Create;
   FZoomPerClick:= 0.25;
 end;
 
-procedure TZoomToolParameters.FillUserInterface(AControl: TWinControl);
+procedure TZoomToolParam.FillUserInterfaceRaw(AControl: TWinControl; var ALeft: Integer);
 const
   ZoomModes: array[0..2] of String = ('Zoom in', 'Zoom out', 'Zoom space');
 var
   TotalLeft: Integer;
   Param: TWinControl;
 begin
-  TotalLeft:= UISettings.Left;
+  TotalLeft:= ALeft;
   Param:= CreateComboBox(AControl, Point(TotalLeft, UISettings.Top), ZoomModes, Integer(FMode), @FModeChange);
   TotalLeft:= TotalLeft + Param.Width + UISettings.Left;
-  Param:= CreateFloatSpinEdit(AControl, Point(TotalLeft, UISettings.Top), 0.1, 2, FZoomPerClick, @FZoomPerClickChange);
+  CreateFloatSpinEdit(AControl, Point(TotalLeft, UISettings.Top), 0.1, 2, FZoomPerClick, @FZoomPerClickChange);
 end;
 
-procedure TLineToolParameters.FPenStyleChange(Sender: TObject);
+procedure TLineToolParam.FPenStyleChange(Sender: TObject);
 begin
   FPen.Style:= TFPPenStyle(TComboBox(Sender).ItemIndex);
 end;
 
-procedure TLineToolParameters.FPenWidthChange(Sender: TObject);
+procedure TLineToolParam.FPenWidthChange(Sender: TObject);
 begin
   FPen.Width:= TSpinEdit(Sender).Value;
 end;
 
-procedure TLineToolParameters.FPenStyleComboBoxDrawItem(Control: TWinControl; AIndex: Integer; ARect: TRect;
+procedure TLineToolParam.FPenStyleComboBoxDrawItem(Control: TWinControl; AIndex: Integer; ARect: TRect;
                                                              AState: TOwnerDrawState);
 const
   PenStyles: array[0..4] of TFPPenStyle = (psSolid, psDash, psDot, psDashDot, psDashDotDot);
@@ -258,30 +277,30 @@ begin
   TComboBox(Control).Canvas.Line(ARect.Left+7, ARect.Bottom div 2+1, ARect.Right-7, ARect.Bottom div 2+1);
 end;
 
-constructor TLineToolParameters.Create;
+constructor TLineToolParam.Create;
 begin
   inherited Create;
   FPen.Width:= 1;
 end;
 
-procedure TLineToolParameters.FillUserInterface(AControl: TWinControl);
+procedure TLineToolParam.FillUserInterfaceRaw(AControl: TWinControl; var ALeft: Integer);
 var
   TotalLeft: Integer;
   Param: TWinControl;
 begin
-  TotalLeft:= UISettings.Left;
+  TotalLeft:= ALeft;
   Param:= CreateSpinEdit(AControl, Point(TotalLeft, UISettings.Top), 1, 100, FPen.Width, @FPenWidthChange);
   TotalLeft:= TotalLeft + Param.Width + UISettings.Left;
-  Param:= CreateComboBox(AControl, Point(TotalLeft, UISettings.Top), 5, Integer(FPen.Style), @FPenStyleComboBoxDrawItem,
-    @FPenStyleChange);
+  CreateComboBox(AControl, Point(TotalLeft, UISettings.Top), 5, Integer(FPen.Style), @FPenStyleComboBoxDrawItem,
+                 @FPenStyleChange);
 end;
 
-procedure TShapeToolParameters.FBrushStyleChange(Sender: TObject);
+procedure TShapeToolParam.FBrushStyleChange(Sender: TObject);
 begin
   FBrush.Style:= TFPBrushStyle(TComboBox(Sender).ItemIndex);
 end;
 
-procedure TShapeToolParameters.FBrushStyleComboBoxDrawItem(Control: TWinControl; AIndex: Integer; ARect: TRect;
+procedure TShapeToolParam.FBrushStyleComboBoxDrawItem(Control: TWinControl; AIndex: Integer; ARect: TRect;
                                                                  AState: TOwnerDrawState);
 const
   BrushStyles: array[0..7] of TFPBrushStyle = (bsSolid, bsClear, bsHorizontal, bsVertical, bsFDiagonal,
@@ -298,58 +317,61 @@ begin
   TComboBox(Control).Canvas.Rectangle(ARect);
 end;
 
-constructor TShapeToolParameters.Create;
+constructor TShapeToolParam.Create;
 begin
   inherited Create;
 end;
 
-procedure TShapeToolParameters.FillUserInterface(AControl: TWinControl);
-var
- TotalLeft: Integer;
- Param: TWinControl;
+procedure TShapeToolParam.FillUserInterfaceRaw(AControl: TWinControl; var ALeft: Integer);
 begin
-  inherited FillUserInterface(AControl);
-  with AControl.Controls[AControl.ControlCount-1] do
-    TotalLeft:= Left+Width+UISettings.Left;
-  Param:= CreateComboBox(AControl, Point(TotalLeft, UISettings.Top), 8, Integer(FBrush.Style),
-    @FBrushStyleComboBoxDrawItem, @FBrushStyleChange);
+  CreateComboBox(AControl, Point(ALeft, UISettings.Top), 8, Integer(FBrush.Style),
+                 @FBrushStyleComboBoxDrawItem, @FBrushStyleChange);
 end;
 
-procedure TRegularPolygonToolParameters.FAngleCountChange(Sender: TObject);
+procedure TRegularPolygonToolParam.FAngleCountChange(Sender: TObject);
 begin
   FAngleCount:= TSpinEdit(Sender).Value;
 end;
 
-constructor TRegularPolygonToolParameters.Create;
+constructor TRegularPolygonToolParam.Create;
 begin
   inherited Create;
 end;
 
-procedure TRegularPolygonToolParameters.FillUserInterface(AControl: TWinControl);
-var
-  Param: TWinControl;
+procedure TRegularPolygonToolParam.FillUserInterfaceRaw(AControl: TWinControl; var ALeft: Integer);
 begin
-  inherited FillUserInterface(AControl);
-  Param:= CreateSpinEdit(AControl, Point(UISettings.Left, UISettings.Top), 3, 1000, FAngleCount, @FAngleCountChange);
+  CreateSpinEdit(AControl, Point(ALeft, UISettings.Top), 3, 1000, FAngleCount, @FAngleCountChange);
 end;
 
-procedure TRoundedRectToolParameters.FRoundingChange(Sender: TObject);
+procedure TRoundedRectToolParam.FRoundingChange(Sender: TObject);
 begin
   FRounding:= TSpinEdit(Sender).Value;
 end;
 
-constructor TRoundedRectToolParameters.Create;
+constructor TRoundedRectToolParam.Create;
 begin
   inherited Create;
 end;
 
-procedure TRoundedRectToolParameters.FillUserInterface(AControl: TWinControl);
-var
-  Param: TWinControl;
+procedure TRoundedRectToolParam.FillUserInterfaceRaw(AControl: TWinControl; var ALeft: Integer);
 begin
-  inherited FillUserInterface(AControl);
-  Param:= CreateSpinEdit(AControl, Point(UISettings.Left, UISettings.Top), 0, 1000, FRounding, @FRoundingChange);
+  CreateSpinEdit(AControl, Point(ALeft, UISettings.Top), 0, 1000, FRounding, @FRoundingChange);
 end;
+
+procedure RegisterToolParam(AParam: TToolParam);
+begin
+  SetLength(ToolParams, Length(ToolParams)+1);
+  ToolParams[High(ToolParams)]:= AParam;
+end;
+
+initialization
+
+RegisterToolParam(TSelectToolParam.Create);
+RegisterToolParam(TZoomToolParam.Create);
+RegisterToolParam(TLineToolParam.Create);
+RegisterToolParam(TShapeToolParam.Create);
+RegisterToolParam(TRegularPolygonToolParam.Create);
+RegisterToolParam(TRoundedRectToolParam.Create);
 
 end.
 
