@@ -456,7 +456,7 @@ end;
 constructor TRectSplitOffFigure.Create;
 begin
   inherited Create;
-  PenParams.Style:= psDash;
+  FLineStyle.Value:= psDash;
 end;
 
 function TRectSplitOffFigure.IsPointInclude(APoint: TDoublePoint): Boolean;
