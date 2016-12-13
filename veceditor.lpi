@@ -35,7 +35,7 @@
         <PackageName Value="LCL"/>
       </Item2>
     </RequiredPackages>
-    <Units Count="11">
+    <Units Count="12">
       <Unit0>
         <Filename Value="veceditor.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -96,6 +96,11 @@
         <IsPartOfProject Value="True"/>
         <UnitName Value="UGeometry"/>
       </Unit10>
+      <Unit11>
+        <Filename Value="uparameditors.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="UParamEditors"/>
+      </Unit11>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

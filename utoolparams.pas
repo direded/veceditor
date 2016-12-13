@@ -5,13 +5,9 @@ unit UToolParams;
 interface
 
 uses
-  Classes, FPCanvas, Graphics, Controls, SysUtils, StdCtrls, Spin, UFigureParams, Dialogs;
+  Classes, FPCanvas, Graphics, Controls, SysUtils, StdCtrls, Spin, UFigureParams, Dialogs, UParamEditors;
 
 type
-
-  TParamChangingEvent = procedure(Sender: TObject) of object;
-  TDrawItemEvent = procedure(Control: TWinControl; AIndex: Integer; ARect: TRect;
-                             AState: TOwnerDrawState) of object;
 
   TToolParam = class
   strict protected
@@ -19,15 +15,7 @@ type
       Left: Integer;
       Top: Integer;
     end;
-    class function CreateComboBox(AOwner: TWinControl; APoint: TPoint; AItems: array of String;
-                                  AStartValue: Integer; AEvent: TParamChangingEvent): TComboBox;
-    class function CreateComboBox(AOwner: TWinControl; APoint: TPoint; AItemCount: Integer; AStartValue: Integer;
-                                  ADrawItemEvent: TDrawItemEvent; AChangingEvent: TParamChangingEvent): TComboBox;
-    class function CreateSpinEdit(AOwner: TWinControl; APoint: TPoint; AMin, AMax: Integer;
-                                  AStartValue: Integer; AEvent: TParamChangingEvent): TSpinEdit;
-    class function CreateFloatSpinEdit(AOwner: TWinControl; APoint: TPoint; AMin, AMax: Double;
-                                       AStartValue: Double; AEvent: TParamChangingEvent): TFloatSpinEdit;
-  public
+    public
     constructor Create;
     procedure SetUISettings(ALeft, ATop: Integer);
     procedure FillUserInterface(AControl: TWinControl);
@@ -112,80 +100,6 @@ var
   ToolParams: TToolParamArray;
 
 implementation
-
-class function TToolParam.CreateComboBox(AOwner: TWinControl; APoint: TPoint; AItems: array of String;
-                                              AStartValue: Integer; AEvent: TParamChangingEvent): TComboBox;
-var
-  str: String;
-begin
-  if Length(AItems) = 0 then Exit;
-  Result:= TComboBox.Create(AOwner);
-  with Result do begin
-    Left:= APoint.X;
-    Top:= APoint.Y;
-    Parent:= AOwner;
-    Width:= 80;
-    ReadOnly:= true;
-    for str in AItems do
-      Items.Add(str);
-    ItemIndex:= AStartValue;
-    OnChange:= AEvent;
-  end;
-end;
-
-class function TToolParam.CreateComboBox(AOwner: TWinControl; APoint: TPoint; AItemCount: Integer; AStartValue: Integer;
-                                              ADrawItemEvent: TDrawItemEvent; AChangingEvent: TParamChangingEvent): TComboBox;
-var
-  i: Integer;
-begin
-  if AItemCount <= 0 then Exit;
-  Result:= TComboBox.Create(AOwner);
-  with Result do begin
-    Left:= APoint.X;
-    Top:= APoint.Y;
-    Parent:= AOwner;
-    Width:= 80;
-    ReadOnly:= true;
-    for i:= 0 to AItemCount-1 do
-      Items.Add('');
-    ItemIndex:= AStartValue;
-    Style:= csOwnerDrawFixed;
-    OnChange:= AChangingEvent;
-    OnDrawItem:= ADrawItemEvent;
-  end;
-end;
-
-class function TToolParam.CreateSpinEdit(AOwner: TWinControl; APoint: TPoint; AMin, AMax: Integer;
-                                              AStartValue: Integer; AEvent: TParamChangingEvent): TSpinEdit;
-begin
-  Result:= TSpinEdit.Create(AOwner);
-  with Result do begin
-    Left:= APoint.X;
-    Top:= APoint.Y;
-    Parent:= AOwner;
-    Width:= 50;
-    OnChange:= AEvent;
-    Value:= AStartValue;
-    MaxValue:= AMax;
-    MinValue:= AMin;
-  end;
-end;
-
-class function TToolParam.CreateFloatSpinEdit(AOwner: TWinControl; APoint: TPoint; AMin, AMax: Double;
-                                              AStartValue: Double; AEvent: TParamChangingEvent): TFloatSpinEdit;
-begin
-  Result:= TFloatSpinEdit.Create(AOwner);
-  with Result do begin
-    Left:= APoint.X;
-    Top:= APoint.Y;
-    Parent:= AOwner;
-    Width:= 85;
-    OnChange:= AEvent;
-    Value:= AStartValue;
-    MaxValue:= AMax;
-    MinValue:= AMin;
-  end;
-end;
 
 constructor TToolParam.Create;
 begin
