@@ -23,6 +23,8 @@ type
     procedure FillUserInterfaceRaw(AControl: TWinControl; var ALeft: Integer); virtual; abstract;
   end;
 
+  TParamEditorArray = array of TParamEditor;
+
   TZoomModePEditor = class(TParamEditor)
   strict private
 
