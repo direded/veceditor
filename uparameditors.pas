@@ -49,6 +49,7 @@ type
   strict private
     FParam: TColorParam;
   public
+    property Parameter: TColorParam read FParam write FParam;
     procedure FillUserInterfaceRaw(AControl: TWinControl; var ALeft: Integer); override;
   end;
 
