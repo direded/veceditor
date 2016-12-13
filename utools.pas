@@ -6,7 +6,7 @@ interface
 uses
 	Classes, Types, Controls, Graphics,
   ExtCtrls, StdCtrls, UFigures, UDoublePoint, UPaintSpace, Math,
-  UFigureParams, UToolParams;
+  UFigureParams, UToolParams, UParamEditors;
 
 type
 
@@ -24,7 +24,6 @@ type
 
 	TTool = class
   strict protected
-    FParams: TToolParamArray;
     FMetadata: TToolMetadata;
     FFigures: TFigures;
     FPaintSpace: TPaintSpace;
@@ -36,6 +35,7 @@ type
     class procedure CleanParamsPanel(APanel: TWinControl);
     procedure SetParamColor(AFigureColors: TFigureColors); virtual;
     procedure SetParamsPanel(APanel: TPanel);
+    function GetParams: TParamEditorArray; virtual;
     procedure CleanUp; virtual;
     procedure MouseDown(APoint: TDoublePoint; AShift: TShiftState); virtual; abstract;
     procedure MouseMove(APoint: TDoublePoint; AShift: TShiftState); virtual; abstract;
@@ -44,10 +44,13 @@ type
 
   TZoomTool = class(TTool)
   strict private
+    FModeE: TZoomModePEditor;
+    FPowerE: TZoomPowerPEditor;
     FFirstPoint: TDoublePoint;
     FSplitOff: TRectSplitOffFigure;
   public
     constructor Create;
+    function GetParams: TParamEditorArray; override;
     procedure MouseDown(APoint: TDoublePoint; AShift: TShiftState); override;
     procedure MouseMove(APoint: TDoublePoint; AShift: TShiftState); override;
   	procedure MouseUp(APoint:TDoublePoint; AShift: TShiftState); override;
@@ -65,6 +68,7 @@ type
 
 	TSelectTool = class(TTool)
   private
+    FSelectBtnE: TSelectAllPEditor;
     FFirstPoint: TDoublePoint;
     FSplitOff: TRectSplitOffFigure;
     FIsFirstOnFigure: Boolean;
@@ -76,6 +80,7 @@ type
       CLICK_SIZE: Integer = 3;
   public
   	constructor Create;
+    function GetParams: TParamEditorArray; override;
     procedure CleanUp; override;
     procedure MouseDown(APoint: TDoublePoint; AShift: TShiftState); override;
     procedure MouseMove(APoint: TDoublePoint; AShift: TShiftState); override;
@@ -95,11 +100,15 @@ type
 
 	TLineTool = class(TDrawingTool)
   strict protected
+    FLineWidthE: TLineWidthPEditor;
+    FLineStyleE: TLineStylePEditor;
+    FLineColorE: TColorPEditor;
     procedure CreateFigure; override;
     procedure InitializeFigure(APoint: TDoublePoint); override;
     procedure SetFigureParams; override;
   public
     constructor Create;
+    function GetParams: TParamEditorArray; override;
     procedure SetParamColor(AFigureColors: TFigureColors); override;
     procedure MouseMove(APoint: TDoublePoint; AShift: TShiftState); override;
     procedure MouseDown(APoint: TDoublePoint; AShift: TShiftState); override;
@@ -115,9 +124,16 @@ type
 
 	TShapeTool = class(TDrawingTool)
   strict protected
+    FLineWidthE: TLineWidthPEditor;
+    FLineStyleE: TLineStylePEditor;
+    FLineColorE: TColorPEditor;
+    FShapeColorE: TColorPEditor;
+    FShapeStyleE: TShapeStylePEditor;
     procedure InitializeFigure(APoint: TDoublePoint); override;
     procedure SetFigureParams; override;
   public
+    constructor Create;
+    function GetParams: TParamEditorArray; override;
     procedure SetParamColor(AFigureColors: TFigureColors); override;
     procedure MouseMove(APoint: TDoublePoint; AShift: TShiftState); override;
     procedure MouseDown(APoint: TDoublePoint; AShift: TShiftState); override;
@@ -139,19 +155,23 @@ type
 
   TRegularPolygonTool = class(TShapeTool)
   strict protected
+    FAngleCountE: TAngleCountPEditor;
     procedure CreateFigure; override;
   public
     constructor Create;
+    function GetParams: TParamEditorArray; override;
     procedure MouseMove(APoint: TDoublePoint; AShift: TShiftState); override;
     procedure MouseDown(APoint: TDoublePoint; AShift: TShiftState); override;
   end;
 
   TRoundedRectTool = class(TShapeTool)
   strict protected
+    FRoundingE: TRoundingPEditor;
     procedure CreateFigure; override;
     procedure SetFigureParams; override;
   public
     constructor Create;
+    function GetParams: TParamEditorArray; override;
     procedure MouseMove(APoint: TDoublePoint; AShift: TShiftState); override;
     procedure MouseDown(APoint: TDoublePoint; AShift: TShiftState); override;
   end;
@@ -188,11 +208,15 @@ begin
 end;
 
 procedure TTool.SetParamsPanel(APanel: TPanel);
-var
-  i: Integer;
+var p: TParamEditor;
 begin
-  for i:= 0 to High(FParams) do
-    FParams[i].FillUserInterface(APanel);
+  for p in GetParams do
+    p.FillUserInterface(APanel);
+end;
+
+function TTool.GetParams: TParamEditorArray;
+begin
+
 end;
 
 procedure TTool.CleanUp;
@@ -220,10 +244,15 @@ constructor TSelectTool.Create;
 begin
   inherited Create;
   FMetadata.Name:= 'Select';
-  SetLength(FParams, 1);
-  FParams[0]:= ToolParams[0];
-  TSelectToolParam(FParams[0]).SelectAllBtnClick:= @FSelectAllBtnClick;
+  FSelectBtnE:= TSelectAllPEditor.Create;
+  FSelectBtnE.SelectAllBtnClick:= @FSelectAllBtnClick;
   FMetadata.Bitmap.LoadFromFile('src/select_tool.bmp');
+end;
+
+function TSelectTool.GetParams: TParamEditorArray;
+begin
+  SetLength(Result, 1);
+  Result[0]:= FSelectBtnE;
 end;
 
 procedure TSelectTool.CleanUp;
@@ -320,17 +349,23 @@ end;
 constructor TZoomTool.Create;
 begin
   inherited Create;
-  SetLength(FParams, 1);
-  FParams[0]:= ToolParams[1];
+  FModeE:= TZoomModePEditor.Create(TZoomModeParam.Create);
+  FPowerE:= TZoomPowerPEditor.Create(TZoomPowerParam.Create);
   FMetadata.Name:= 'Zoom';
   FMetadata.Bitmap.LoadFromFile('src/zoom_tool.bmp');
-  FFirstPoint:= GetDoublePoint;
+end;
+
+function TZoomTool.GetParams: TParamEditorArray;
+begin
+  SetLength(Result, 2);
+  Result[0]:= FPowerE;
+  Result[1]:= FModeE;
 end;
 
 procedure TZoomTool.MouseDown(APoint: TDoublePoint; AShift: TShiftState);
 begin
   FFirstPoint:= APoint;
-  if TZoomToolParam(FParams[0]).Mode = zmtlZoomSpace then begin
+  if FModeE.Parameter.Value = TZoomModeParam.TZoomModes.zmtlZoomSpace then begin
     FSplitOff:= TRectSplitOffFigure.Create;
     FSplitOff.SetPointsLength(2);
     FSplitOff.Points[0]:= APoint;
@@ -340,7 +375,7 @@ end;
 
 procedure TZoomTool.MouseMove(APoint: TDoublePoint; AShift: TShiftState);
 begin
-  if TZoomToolParam(FParams).Mode = zmtlZoomSpace then begin
+  if FModeE.Parameter.Value = TZoomModeParam.TZoomModes.zmtlZoomSpace then begin
     FSplitOff.Points[1]:= APoint;
   end;
 end;
@@ -348,11 +383,10 @@ end;
 procedure TZoomTool.MouseUp(APoint: TDoublePoint; AShift: TShiftState);
 begin
   if ssRight in AShift then exit;
-  with TZoomToolParam(FParams) do
-  case Mode of
-    zmtlZoomOut : FPaintSpace.SetScalePoint(FPaintSpace.Scale-ZoomPerClick, APoint);
-    zmtlZoomIn : FPaintSpace.SetScalePoint(FPaintSpace.Scale+ZoomPerClick, APoint);
-    zmtlZoomSpace : begin
+  case FModeE.Parameter.Value  of
+    TZoomModeParam.TZoomModes.zmtlZoomOut : FPaintSpace.SetScalePoint(FPaintSpace.Scale-FPowerE.Parameter.Value, APoint);
+    TZoomModeParam.TZoomModes.zmtlZoomIn : FPaintSpace.SetScalePoint(FPaintSpace.Scale+FPowerE.Parameter.Value, APoint);
+    TZoomModeParam.TZoomModes.zmtlZoomSpace : begin
       if abs(FFirstPoint.X-APoint.X) > abs(FFirstPoint.Y-APoint.Y) then
         FPaintSpace.Scale:= FPaintSpace.PaintBox.Width/abs(FFirstPoint.X-APoint.X)
       else
@@ -382,11 +416,21 @@ end;
 
 constructor TLineTool.Create;
 begin
-  SetLength(FParams, 1);
-  FParams[0]:= ToolParams[2];
+  inherited;
+  FLineColorE:= TColorPEditor.Create(TColorParam.Create);
+  FLineWidthE:= TLineWidthPEditor.Create(TLineWidthParam.Create);
+  FLineStyleE:= TLineStylePEditor.Create(TLineStyleParam.Create);
   FMetadata.Name:= 'Line';
   FMetadata.Bitmap:= TBitmap.Create;
   FMetadata.Bitmap.LoadFromFile('src/line_tool.bmp');
+end;
+
+function TLineTool.GetParams: TParamEditorArray;
+begin
+  SetLength(Result, 3);
+  Result[0]:= FLineWidthE;
+  Result[1]:= FLineStyleE;
+  Result[2]:= FLineColorE;
 end;
 
 procedure TLineTool.CreateFigure;
@@ -402,13 +446,18 @@ begin
 end;
 
 procedure TLineTool.SetFigureParams;
+var
+  f: TLineFigure;
 begin
-  TLineFigure(FFigure).PenParams:= TLineToolParam(FParams[0]).Pen;
+  f:= TLineFigure(FFigure);
+  f.LineWidth.Value:= FLineWidthE.Parameter.Value;
+  f.LineStyle.Value:= FLineStyleE.Parameter.Value;
+  f.LineColor.Value:= FLineColorE.Parameter.Value;
 end;
 
 procedure TLineTool.SetParamColor(AFigureColors: TFigureColors);
 begin
-  TLineToolParam(FParams[0]).Pen.Color:= AFigureColors.Pen;
+  FLineColorE.Parameter.Value:= AFigureColors.Pen;
 end;
 
 procedure TLineTool.MouseDown(APoint: TDoublePoint; AShift: TShiftState);
@@ -431,10 +480,8 @@ end;
 
 constructor TPenTool.Create;
 begin
-  SetLength(FParams, 1);
-  FParams[0]:= ToolParams[2];
+  inherited Create;
   FMetadata.Name:= 'Pen';
-  FMetadata.Bitmap:= TBitmap.Create;
   FMetadata.Bitmap.LoadFromFile('src/pen_tool.bmp');
 end;
 
@@ -451,15 +498,41 @@ begin
 end;
 
 procedure TShapeTool.SetFigureParams;
+var
+  f: TShapeFigure;
 begin
-  TShapeFigure(FFigure).PenParams:= TLineToolParam(FParams[0]).Pen;
-  TShapeFigure(FFigure).BrushParams:= TShapeToolParam(FParams[1]).Brush;
+  f:= TShapeFigure(FFigure);
+  f.LineColor.Value:= FLineColorE.Parameter.Value;
+  f.LineWidth.Value:= FLineWidthE.Parameter.Value;
+  f.LineStyle.Value:= FLineStyleE.Parameter.Value;
+  f.ShapeColor.Value:= FShapeColorE.Parameter.Value;
+  f.ShapeStyle.Value:= FShapeStyleE.Parameter.Value;
+end;
+
+constructor TShapeTool.Create;
+begin
+  inherited;
+  FLineWidthE:= TLineWidthPEditor.Create(TLineWidthParam.Create);
+  FLineStyleE:= TLineStylePEditor.Create(TLineStyleParam.Create);
+  FLineColorE:= TColorPEditor.Create(TColorParam.Create);
+  FShapeColorE:= TColorPEditor.Create(TColorParam.Create);
+  FShapeStyleE:= TShapeStylePEditor.Create(TShapeStyleParam.Create);
+end;
+
+function TShapeTool.GetParams: TParamEditorArray;
+begin
+  SetLength(Result, 5);
+  Result[0]:= FLineWidthE;
+  Result[1]:= FLineStyleE;
+  Result[2]:= FLineColorE;
+  Result[3]:= FShapeStyleE;
+  Result[4]:= FShapeColorE;
 end;
 
 procedure TShapeTool.SetParamColor(AFigureColors: TFigureColors);
 begin
-  TLineToolParam(FParams[0]).Pen.Color:= AFigureColors.Pen;
-  TShapeToolParam(FParams[1]).Brush.Color:= AFigureColors.Brush;
+  FLineColorE.Parameter.Value:= AFigureColors.Pen;
+  FShapeColorE.Parameter.Value:= AFigureColors.Brush;
 end;
 
 procedure TShapeTool.MouseDown(APoint: TDoublePoint; AShift: TShiftState);
@@ -482,11 +555,8 @@ end;
 
 constructor TEllipseTool.Create;
 begin
-  SetLength(FParams, 2);
-  FParams[0]:= ToolParams[2];
-  FParams[1]:= ToolParams[3];
+  inherited;
   FMetadata.Name:= 'Ellipse';
-  FMetadata.Bitmap:= TBitmap.Create;
   FMetadata.Bitmap.LoadFromFile('src/ellipse_tool.bmp');
 end;
 
@@ -498,31 +568,32 @@ end;
 
 constructor TRectTool.Create;
 begin
-  SetLength(FParams, 2);
-  FParams[0]:= ToolParams[2];
-  FParams[1]:= ToolParams[3];
+  inherited;
   FMetadata.Name:= 'Rect';
-  FMetadata.Bitmap:= TBitmap.Create;
   FMetadata.Bitmap.LoadFromFile('src/rect_tool.bmp');
 end;
 
 procedure TRegularPolygonTool.CreateFigure;
 begin
   FFigure:= TRegularPolygonFigure.Create;
-  FFigure.SetPointsLength(TRegularPolygonToolParam(FParams[2]).AngleCount);
+  FFigure.SetPointsLength(FAngleCountE.Parameter.Value);
   FFigures.AddFigure(FFigure);
 end;
 
 constructor TRegularPolygonTool.Create;
 begin
+  inherited;
   FMetadata.Name:= 'RegularPolygon';
-  SetLength(FParams, 3);
-  FParams[0]:= ToolParams[2];
-  FParams[1]:= ToolParams[3];
-  FParams[2]:= ToolParams[4];
-  FMetadata.Bitmap:= TBitmap.Create;
+  FAngleCountE:= TAngleCountPEditor.Create(TAngleCountParam.Create);
   FMetadata.Bitmap.LoadFromFile('src/regular_tool.bmp');
-  TRegularPolygonToolParam(FParams[2]).AngleCount:= 3;
+  FAngleCountE.Parameter.Value:= 3;
+end;
+
+function TRegularPolygonTool.GetParams: TParamEditorArray;
+begin
+  inherited;
+  SetLength(Result, Length(Result)+1);
+  Result[High(Result)]:= FAngleCountE;
 end;
 
 procedure TRegularPolygonTool.MouseDown(APoint: TDoublePoint; AShift: TShiftState);
@@ -531,13 +602,10 @@ begin
   InitializeFigure(APoint);
   SetFigureParams;
   FFigure.Points[1]:= APoint;
-  TRegularPolygonFigure(FFigure).AngleCount:= TRegularPolygonToolParam(FParams[2]).AngleCount;
+  TRegularPolygonFigure(FFigure).AngleCountParam.Value:= FAngleCountE.Parameter.Value;
 end;
 
 procedure TRegularPolygonTool.MouseMove(APoint: TDoublePoint; AShift: TShiftState);
-var
-  i: Integer;
-  vec: TDoublePoint;
 begin
   FFigure.Points[1]:= APoint;
 end;
@@ -551,18 +619,22 @@ end;
 procedure TRoundedRectTool.SetFigureParams;
 begin
   inherited SetFigureParams;
-  TRoundedRectFigure(FFigure).Rounding:= TRoundedRectToolParam(FParams[2]).Rounding;
+  TRoundedRectFigure(FFigure).Rounding:= FRoundingE.Parameter.Value;
 end;
 
 constructor TRoundedRectTool.Create;
 begin
-  SetLength(FParams, 3);
-  FParams[0]:= ToolParams[2];
-  FParams[1]:= ToolParams[3];
-  FParams[2]:= ToolParams[5];
+  inherited;
+  FRoundingE:= TRoundingPEditor.Create(TRoundingParam.Create);
   FMetadata.Name:= 'RoundedRect';
-  FMetadata.Bitmap:= TBitmap.Create;
   FMetadata.Bitmap.LoadFromFile('src/rect_tool.bmp');
+end;
+
+function TRoundedRectTool.GetParams: TParamEditorArray;
+begin
+  inherited;
+  SetLength(Result, Length(Result)+1);
+  Result[High(Result)]:= FRoundingE;
 end;
 
 procedure TRoundedRectTool.MouseDown(APoint: TDoublePoint; AShift: TShiftState);

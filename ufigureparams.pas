@@ -59,6 +59,25 @@ type
     property Value: Integer read FValue write FValue;
   end;
 
+  { Other params }
+
+  TZoomModeParam = class(TFigureParam)
+  public
+  type
+    TZoomModes = (zmtlZoomIn, zmtlZoomOut, zmtlZoomSpace);
+  strict private
+    FValue: TZoomModes;
+  public
+    property Value: TZoomModes read FValue write FValue;
+  end;
+
+  TZoomPowerParam = class(TFigureParam)
+  strict private
+    FValue: Double;
+  public
+    property Value: Double read FValue write FValue;
+  end;
+
   { Misc }
 
   TFigureColors = record

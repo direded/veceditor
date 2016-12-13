@@ -26,11 +26,23 @@ type
   TParamEditorArray = array of TParamEditor;
 
   TZoomModePEditor = class(TParamEditor)
-
+  strict private
+    FParam: TZoomModeParam;
+    procedure ParamChange(Sender: TObject);
+  public
+    constructor Create(AParam: TZoomModeParam);
+    property Parameter: TZoomModeParam read FParam write FParam;
+    procedure FillUserInterfaceRaw(AControl: TWinControl; var ALeft: Integer); override;
   end;
 
   TZoomPowerPEditor = class(TParamEditor)
-
+  strict private
+    FParam: TZoomPowerParam;
+    procedure ParamChange(Sender: TObject);
+  public
+    constructor Create(AParam: TZoomPowerParam);
+    property Parameter: TZoomPowerParam read FParam write FParam;
+    procedure FillUserInterfaceRaw(AControl: TWinControl; var ALeft: Integer); override;
   end;
 
   TSelectAllPEditor = class(TParamEditor)
@@ -126,6 +138,37 @@ begin
   else
     CurrentLeft:= UILeft;
   FillUserInterfaceRaw(AControl, CurrentLeft);
+end;
+
+constructor TZoomPowerPEditor.Create(AParam: TZoomPowerParam);
+begin
+  FParam:= AParam;
+end;
+
+procedure TZoomPowerPEditor.FillUserInterfaceRaw(AControl: TWinControl; var ALeft: Integer);
+begin
+  CreateFloatSpinEdit(AControl, Point(ALeft, UITop), 0.1, 2, FParam.Value, @ParamChange);
+end;
+
+procedure TZoomModePEditor.ParamChange(Sender: TObject);
+begin
+  FParam.Value:= TZoomModeParam.TZoomModes(TComboBox(Sender).ItemIndex);
+end;
+
+constructor TZoomModePEditor.Create(AParam: TZoomModeParam);
+begin
+  FParam:= AParam;
+end;
+
+procedure TZoomModePEditor.FillUserInterfaceRaw(AControl: TWinControl; var ALeft: Integer);
+const ZoomModes: array [0..2] of String = ('Zoom in', 'Zoom out', 'Zoom space');
+begin
+  CreateComboBox(AControl, Point(ALeft, UITop), ZoomModes, Integer(FParam.Value), @ParamChange);
+end;
+
+procedure TZoomPowerPEditor.ParamChange(Sender: TObject);
+begin
+  FParam.Value:= TFloatSpinEdit(Sender).Value;
 end;
 
 procedure TSelectAllPEditor.FillUserInterfaceRaw(AControl: TWinControl; var ALeft: Integer);

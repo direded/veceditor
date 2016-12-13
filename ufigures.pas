@@ -54,8 +54,11 @@ type
     procedure SetFigureParams(ACanvas: TCanvas); override;
     procedure DrawRaw(APaintSpace: TPaintSpace); override;
   public
-    property PenParams: TPenParams read GetLineParams write SetLineParams;
+    property PenParams: TPenParams read GetLineParams;
     constructor Create;
+    property LineColor: TColorParam read FLineColor;
+    property LineWidth: TLineWidthParam read FLineWidth;
+    property LineStyle: TLineStyleParam read FLineStyle;
     function GetParams: TFigureParamArray; override;
     function IsPointInclude(APoint: TDoublePoint): Boolean; override;
     function IsFullInRect(A, B: TDoublePoint): Boolean; override;
@@ -73,8 +76,10 @@ type
     procedure SetBrushParams(AValue: TBrushParams);
   public
     constructor Create;
+    property ShapeColor: TColorParam read FShapeColor;
+    property ShapeStyle: TShapeStyleParam read FShapeStyle;
     function IsPartInRect(A, B: TDoublePoint): Boolean; override;
-    property BrushParams: TBrushParams read GetBrushParams write SetBrushParams;
+    property BrushParams: TBrushParams read GetBrushParams;
     function GetParams: TFigureParamArray; override;
     function IsValid: Boolean; override;
   end;
@@ -94,7 +99,8 @@ type
     function GetAngleCount: Integer;
     procedure SetAngleCount(AValue: Integer);
   public
-    property AngleCount: Integer read GetAngleCount write SetAngleCount;
+    property AngleCount: Integer read GetAngleCount;
+    property AngleCountParam: TAngleCountParam read FAngleCountParam;
     constructor Create;
     function IsValid: Boolean; override;
     function IsPointInclude(APoint: TDoublePoint): Boolean; override; // Doesn't work this nonregular polygons! Need to fix!
@@ -126,6 +132,7 @@ type
     procedure DrawRaw(APaintSpace: TPaintSpace); override;
 	public
     property Rounding: Integer read GetRounding write SetRounding;
+    property RoundingParam: TRoundingParam read FRoundingParam;
     constructor Create;
     function IsPointInclude(APoint: TDoublePoint): Boolean; override;
   end;
