@@ -35,6 +35,7 @@ type
     procedure SetPointsLength(ALength: Integer);
     procedure IncreasePointsLength;
     procedure Bake; virtual;
+    function GetParams: TFigureParamArray; virtual; abstract;
     procedure Draw(APaintSpace: TPaintSpace); virtual;
   end;
 
@@ -43,14 +44,19 @@ type
 
   TLineFigure = class(TFigure)
   strict protected
-    FPenParams: TPenParams;
+    FLineColor: TColorParam;
+    FLineWidth: TLineWidthParam;
+    FLineStyle: TLineStyleParam;
+    function GetLineParams: TPenParams;
+    procedure SetLineParams(AValue: TPenParams);
     procedure SetSelectionParams(ACanvas: TCanvas); override;
     procedure DrawSelection(APaintSpace: TPaintSpace); override;
     procedure SetFigureParams(ACanvas: TCanvas); override;
     procedure DrawRaw(APaintSpace: TPaintSpace); override;
   public
-    property PenParams: TPenParams read FPenParams write FPenParams;
+    property PenParams: TPenParams read GetLineParams write SetLineParams;
     constructor Create;
+    function GetParams: TFigureParamArray; override;
     function IsPointInclude(APoint: TDoublePoint): Boolean; override;
     function IsFullInRect(A, B: TDoublePoint): Boolean; override;
     function IsPartInRect(A, B: TDoublePoint): Boolean; override;
@@ -59,13 +65,17 @@ type
 
   TShapeFigure = class(TLineFigure)
   strict protected
-    FBrushParams: TBrushParams;
+    FShapeColor: TColorParam;
+    FShapeStyle: TShapeStyleParam;
     procedure SetSelectionParams(ACanvas: TCanvas); override;
     procedure SetFigureParams(ACanvas: TCanvas); override;
+    function GetBrushParams: TBrushParams;
+    procedure SetBrushParams(AValue: TBrushParams);
   public
     constructor Create;
     function IsPartInRect(A, B: TDoublePoint): Boolean; override;
-    property BrushParams: TBrushParams read FBrushParams write FBrushParams;
+    property BrushParams: TBrushParams read GetBrushParams write SetBrushParams;
+    function GetParams: TFigureParamArray; override;
     function IsValid: Boolean; override;
   end;
 
@@ -104,12 +114,14 @@ type
 
   TRoundedRectFigure = class(TShapeFigure)
   strict private
-    FRounding: Integer;
+    FRoundingParam: TRoundingParam;
+    function GetRounding: Integer;
+    procedure SetRounding(AValue: Integer);
   strict protected
     procedure DrawSelection(APaintSpace: TPaintSpace); override;
     procedure DrawRaw(APaintSpace: TPaintSpace); override;
 	public
-    property Rounding: Integer read FRounding write FRounding;
+    property Rounding: Integer read GetRounding write SetRounding;
     constructor Create;
     function IsPointInclude(APoint: TDoublePoint): Boolean; override;
   end;
@@ -219,6 +231,20 @@ begin
   end;
 end;
 
+function TLineFigure.GetLineParams: TPenParams;
+begin
+  Result.Color:= FLineColor.Value;
+  Result.Style:= FLineStyle.Value;
+  Result.Width:= FLineWidth.Value;
+end;
+
+procedure TLineFigure.SetLineParams(AValue: TPenParams);
+begin
+  FLineWidth.Value:= AValue.Width;
+  FLineStyle.Value:= AValue.Style;
+  FLineColor.Value:= AValue.Color;
+end;
+
 procedure TLineFigure.SetSelectionParams(ACanvas: TCanvas);
 begin
   ACanvas.Pen.Width:= ACanvas.Pen.Width+1;
@@ -226,7 +252,7 @@ end;
 
 procedure TLineFigure.SetFigureParams(ACanvas: TCanvas);
 begin
-  SetCanvasParams(FPenParams, ACanvas.Pen);
+  SetCanvasParams(PenParams, ACanvas.Pen);
 end;
 
 procedure TLineFigure.DrawRaw(APaintSpace: TPaintSpace);
@@ -237,6 +263,17 @@ end;
 constructor TLineFigure.Create;
 begin
   SetLength(FPoints, 2);
+  FLineWidth:= TLineWidthParam.Create;
+  FLineStyle:= TLineStyleParam.Create;
+  FLineColor:= TColorParam.Create;;
+end;
+
+function TLineFigure.GetParams: TFigureParamArray;
+begin
+  SetLength(Result, Length(Result)+3);
+  Result[High(Result)-2]:= FLineColor;
+  Result[High(Result)-1]:= FLineStyle;
+  Result[High(Result)]:= FLineWidth;
 end;
 
 function TLineFigure.IsPointInclude(APoint: TDoublePoint): Boolean;
@@ -286,8 +323,20 @@ end;
 
 procedure TShapeFigure.SetFigureParams(ACanvas: TCanvas);
 begin
-  SetCanvasParams(FPenParams, ACanvas.Pen);
-  SetCanvasParams(FBrushParams, ACanvas.Brush);
+  SetCanvasParams(PenParams, ACanvas.Pen);
+  SetCanvasParams(BrushParams, ACanvas.Brush);
+end;
+
+function TShapeFigure.GetBrushParams: TBrushParams;
+begin
+  Result.Color:= FShapeColor.Value;
+  Result.Style:= FShapeStyle.Value;
+end;
+
+procedure TShapeFigure.SetBrushParams(AValue: TBrushParams);
+begin
+  FShapeColor.Value:= AValue.Color;
+  FShapeStyle.Value:= AValue.Style;
 end;
 
 function TShapeFigure.IsPartInRect(A, B: TDoublePoint): Boolean;
@@ -304,6 +353,16 @@ end;
 constructor TShapeFigure.Create;
 begin
   inherited Create;
+  FShapeColor:= TColorParam.Create;
+  FShapeStyle:= TShapeStyleParam.Create;
+end;
+
+function TShapeFigure.GetParams: TFigureParamArray;
+begin
+  Result:= inherited GetParams;
+  SetLength(Result, Length(Result)+2);
+  Result[High(Result)-1]:= FShapeColor;
+  Result[High(Result)]:= FShapeStyle;
 end;
 
 function TShapeFigure.IsValid: Boolean;
@@ -371,7 +430,7 @@ end;
 constructor TRectSplitOffFigure.Create;
 begin
   inherited Create;
-  FPenParams.Style:= psDash;
+  PenParams.Style:= psDash;
 end;
 
 function TRectSplitOffFigure.IsPointInclude(APoint: TDoublePoint): Boolean;
@@ -382,7 +441,7 @@ end;
 procedure TRectSplitOffFigure.Draw(APaintSpace: TPaintSpace);
 begin
   with APaintSpace do begin
-    SetCanvasParams(FPenParams, Canvas.Pen);
+    SetCanvasParams(PenParams, Canvas.Pen);
     Canvas.Frame(ToLocal(FPoints[0]).X, ToLocal(FPoints[0]).Y,
                  ToLocal(FPoints[1]).X, ToLocal(FPoints[1]).Y);
   end;
@@ -437,21 +496,32 @@ begin
   Exit(false);
 end;
 
+function TRoundedRectFigure.GetRounding: Integer;
+begin
+  Result:= FRoundingParam.Value;
+end;
+
+procedure TRoundedRectFigure.SetRounding(AValue: Integer);
+begin
+  FRoundingParam.Value:= AValue;
+end;
+
 procedure TRoundedRectFigure.DrawSelection(APaintSpace: TPaintSpace);
 begin
-
+  inherited;
 end;
 
 procedure TRoundedRectFigure.DrawRaw(APaintSpace: TPaintSpace);
 begin
   with APaintSpace do
     Canvas.RoundRect(ToLocal(FPoints[0]).X, ToLocal(FPoints[0]).Y,
-                     ToLocal(FPoints[1]).X, ToLocal(FPoints[1]).Y, FRounding, FRounding);
+                     ToLocal(FPoints[1]).X, ToLocal(FPoints[1]).Y, Rounding, Rounding);
 end;
 
 constructor TRoundedRectFigure.Create;
 begin
   inherited Create;
+  FRoundingParam:= TRoundingParam.Create;
 end;
 
 function TRoundedRectFigure.IsPointInclude(APoint: TDoublePoint): Boolean;

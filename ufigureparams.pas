@@ -9,6 +9,58 @@ uses
 
 type
 
+  { Params }
+
+  TFigureParam = class
+
+  end;
+
+  TFigureParamArray = array of TFigureParam;
+
+  TColorParam = class(TFigureParam)
+  strict private
+    FValue: TColor;
+  public
+    property Value: TColor read FValue write FValue;
+  end;
+
+  TLineWidthParam = class(TFigureParam)
+  strict private
+    FValue: Integer;
+  public
+    property Value: Integer read FValue write FValue;
+  end;
+
+  TLineStyleParam = class(TFigureParam)
+  strict private
+    FValue: TFPPenStyle;
+  public
+    property Value: TFPPenStyle read FValue write FValue;
+  end;
+
+  TShapeStyleParam = class(TFigureParam)
+  strict private
+    FValue: TFPBrushStyle;
+  public
+    property Value: TFPBrushStyle read FValue write FValue;
+  end;
+
+  TAngleCountParam = class(TFigureParam)
+  strict private
+    FValue: Integer;
+  public
+    property Value: Integer read FValue write FValue;
+  end;
+
+  TRoundingParam = class(TFigureParam)
+  strict private
+    FValue: Integer;
+  public
+    property Value: Integer read FValue write FValue;
+  end;
+
+  { Misc }
+
   TFigureColors = record
     Brush: TColor;
     Pen: TColor;
@@ -92,4 +144,9 @@ begin
 end;
 
 end.
+
+{
+  Открыть, сохранить как, заголовок окна, измененный файл (пометка *), вопрос о сохранении данных при создании нового
+  Виртуальный метод Save у фигуры, который возвращает ClassName
+}
 
