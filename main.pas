@@ -76,6 +76,7 @@ type
     procedure PaintSpaceScaleChange;
     procedure PaintSpacePositionChange;
     procedure FiguresFigureAdd;
+    procedure ToolParamsListChange;
   end;
 
 	TColorArray = array of TColor;
@@ -136,6 +137,7 @@ begin
     Tools[i].SetParamColor(CurrentTool.FigureColors);
     Tools[i].PaintSpace:= PaintSpace;
     Tools[i].Figures:= Figures;
+    Tools[i].OnParamsListChange:= @ToolParamsListChange;
   end;
   PenColorPanel.Top:= ToolBtn.Top + ToolBtn.Height + PenColorPanel.Top;
   PenColorPanel.Color:= CurrentTool.FigureColors.Pen;
@@ -230,7 +232,6 @@ procedure TMainForm.ToolBtnClick(Sender: TObject);
 begin
   CurrentTool.Tool.CleanUp;
   CurrentTool.Tool:= Tools[(Sender as TBitBtn).Tag];
-  TTool.CleanParamsPanel(ToolParamsPanel);
   CurrentTool.Tool.SetParamsPanel(ToolParamsPanel);
   CurrentTool.Tool.SetParamColor(CurrentTool.FigureColors);
 end;
@@ -320,6 +321,11 @@ procedure TMainForm.FiguresFigureAdd;
 begin
   UpdateVertScroll(VertPaintSpaceScrl, PaintSpace);
   UpdateHoriScroll(HoriPaintSpaceScrl, PaintSpace);
+end;
+
+procedure TMainForm.ToolParamsListChange;
+begin
+  CurrentTool.Tool.SetParamsPanel(ToolParamsPanel);
 end;
 
 procedure TMainForm.PaintSpaceScaleChange;

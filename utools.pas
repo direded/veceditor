@@ -6,7 +6,7 @@ interface
 uses
 	Classes, Types, Controls, Graphics,
   ExtCtrls, StdCtrls, UFigures, UDoublePoint, UPaintSpace, Math,
-  UFigureParams, UToolParams, UParamEditors;
+  UFigureParams, UToolParams, UParamEditors, UUtils;
 
 type
 
@@ -27,8 +27,12 @@ type
     FMetadata: TToolMetadata;
     FFigures: TFigures;
     FPaintSpace: TPaintSpace;
+    FOnParamChange: TEventHandler;
+    FOnParamsListChange: TEventHandler;
   public
     constructor Create;
+    property OnParamChange: TEventHandler read FOnParamChange write FOnParamChange;
+    property OnParamsListChange: TEventHandler read FOnParamsListChange write FOnParamsListChange;
     property Figures: TFigures read FFigures write FFigures;
     property Metadata: TToolMetadata read FMetadata;
     property PaintSpace: TPaintSpace write FPaintSpace;
@@ -73,9 +77,16 @@ type
     FSplitOff: TRectSplitOffFigure;
     FIsFirstOnFigure: Boolean;
     FLastPoint: TDoublePoint;
+    FCommonParams: array of TFigureParamArray;
+    FFigureEditors: TFigureParamEditorArray;
+    procedure ParamChange;
     procedure FRevers(AFigure: TFigure);
     procedure FSelect(AFigure: TFigure);
     procedure FSelectAllBtnClick(Sender: TObject);
+    procedure InitFiguresParams;
+    procedure AddFigureParamEditor(AParam: TFigureParamEditor);
+    procedure CrossParams(AParams: TFigureParamArray);
+    procedure ShowFiguresEditors(AControl: TWinControl);
     const
       CLICK_SIZE: Integer = 3;
   public
@@ -183,6 +194,18 @@ var
 
 implementation
 
+procedure Push(var Element: TFigureParam; var Arr: TFigureParamArray);
+begin
+  SetLength(Arr, Length(Arr)+1);
+  Arr[High(Arr)]:= Element;
+end;
+
+procedure Push(Element: Integer; var Arr: TIntArray);
+begin
+  SetLength(Arr, Length(Arr)+1);
+  Arr[High(Arr)]:= Element;
+end;
+
 procedure RegisterTool(ATool: TTool);
 begin
 	SetLength(Tools, Length(Tools)+1);
@@ -210,6 +233,7 @@ end;
 procedure TTool.SetParamsPanel(APanel: TPanel);
 var p: TParamEditor;
 begin
+  CleanParamsPanel(APanel);
   for p in GetParams do
     p.FillUserInterface(APanel);
 end;
@@ -223,6 +247,12 @@ procedure TTool.CleanUp;
 begin
 
 end;
+
+procedure TSelectTool.ParamChange;
+begin
+  FPaintSpace.PaintBox.Invalidate;
+end;
+
 
 procedure TSelectTool.FRevers(AFigure: TFigure);
 begin
@@ -249,16 +279,110 @@ begin
   FMetadata.Bitmap.LoadFromFile('src/select_tool.bmp');
 end;
 
+procedure TSelectTool.InitFiguresParams;
+var
+  i, j: Integer;
+  firstFound: Boolean = false;
+  fp: TFigureParamArray;
+  editors: TFigureParamEditorClassArray;
+  editor: TFigureParamEditor;
+begin
+  FFigureEditors:= nil;
+  FCommonParams:= nil;
+  for i:= 0 to High(FFigures.Content) do begin
+    if FFigures[i].Selected then begin
+      fp:= Figures[i].GetParams;
+      if not firstFound then begin
+        firstFound:= True;
+        SetLength(FCommonParams, Length(fp));
+        for j:= 0 to High(FCommonParams) do begin
+          SetLength(FCommonParams[j], 1);
+          FCommonParams[j, 0]:= fp[j];
+        end;
+      end
+      else
+        CrossParams(fp);
+    end;
+  end;
+  editors:= GetFigureEditorClasses;
+  for i:= Low(FCommonParams) to High(FCommonParams) do begin
+    //writeln(Length(FCommonParams));
+    for j:= 0 to High(editors) do begin
+      editor:= editors[j].Create;
+      if FCommonParams[i,0].ClassType = editor.GetParamType then begin
+        editor.AttachParams(FCommonParams[i]);
+        AddFigureParamEditor(editor);
+        editor.OnParamChange:= @ParamChange;
+        //writeln(editor.GetParamType.ClassName);
+      end
+      else
+        editor.Free;
+    end;
+  end;
+end;
+
+procedure TSelectTool.AddFigureParamEditor(AParam: TFigureParamEditor);
+begin
+  SetLength(FFigureEditors, Length(FFigureEditors)+1);
+  FFigureEditors[High(FFigureEditors)]:= AParam;
+end;
+
+procedure TSelectTool.CrossParams(AParams: TFigureParamArray);
+var
+  i, j: Integer;
+  IsFound: Boolean;
+  TempParams: array of array of TFigureParam;
+  DiffIndexes: TIntArray;
+begin
+  for i:= Low(FCommonParams) to High(FCommonParams) do begin
+    IsFound:= false;
+    for j:= Low(AParams) to High(AParams) do begin
+      if FCommonParams[i, 0].ClassType = AParams[j].ClassType then begin
+        IsFound:= true;
+        Push(AParams[j], FCommonParams[i]);
+      end;
+    end;
+    if not IsFound then begin
+      Push(i, DiffIndexes);
+    end;
+  end;
+  SetLength(TempParams, Length(FCommonParams)-Length(DiffIndexes));
+  j:= Low(TempParams);
+  for i:= Low(FCommonParams) to High(FCommonParams) do begin
+    if IsInArray(i, DiffIndexes) then Continue;
+    TempParams[j]:= FCommonParams[i];
+    j+= 1;
+  end;
+  FCommonParams:= TempParams;
+end;
+
+procedure TSelectTool.ShowFiguresEditors(AControl: TWinControl);
+var
+  e: TFigureParamEditor;
+begin
+  for e in FFigureEditors do
+    e.FillUserInterface(AControl);
+end;
+
 function TSelectTool.GetParams: TParamEditorArray;
+var
+  i: Integer;
 begin
   SetLength(Result, 1);
   Result[0]:= FSelectBtnE;
+  //SetLength(Result, Length(Result)+Length(FFigureEditors));
+  for i:= Low(FFigureEditors) to High(FFigureEditors) do begin
+    SetLength(Result, Length(Result)+1);
+    Result[High(Result)]:= FFigureEditors[i];
+  end;
 end;
 
 procedure TSelectTool.CleanUp;
 begin
   FFigures.UnSelectAllFigures;
   FPaintSpace.PaintBox.Invalidate;
+  FFigureEditors:= nil;
+  FCommonParams:= nil;
 end;
 
 procedure TSelectTool.MouseDown(APoint: TDoublePoint; AShift: TShiftState);
@@ -320,6 +444,8 @@ begin
       FFigures.SetSelectionFigure(APoint, @FSelect);
     end;
   end;
+  InitFiguresParams;
+  if Assigned(FOnParamsListChange) then FOnParamsListChange;
 end;
 
 constructor THandTool.Create;
@@ -349,8 +475,8 @@ end;
 constructor TZoomTool.Create;
 begin
   inherited Create;
-  FModeE:= TZoomModePEditor.Create(TZoomModeParam.Create);
-  FPowerE:= TZoomPowerPEditor.Create(TZoomPowerParam.Create);
+  FModeE:= TZoomModePEditor.Create;
+  FPowerE:= TZoomPowerPEditor.Create;
   FMetadata.Name:= 'Zoom';
   FMetadata.Bitmap.LoadFromFile('src/zoom_tool.bmp');
 end;
@@ -417,9 +543,9 @@ end;
 constructor TLineTool.Create;
 begin
   inherited;
-  FLineColorE:= TColorPEditor.Create(TColorParam.Create);
-  FLineWidthE:= TLineWidthPEditor.Create(TLineWidthParam.Create);
-  FLineStyleE:= TLineStylePEditor.Create(TLineStyleParam.Create);
+  FLineColorE:= TColorPEditor.Create;
+  FLineWidthE:= TLineWidthPEditor.Create;
+  FLineStyleE:= TLineStylePEditor.Create;
   FMetadata.Name:= 'Line';
   FMetadata.Bitmap:= TBitmap.Create;
   FMetadata.Bitmap.LoadFromFile('src/line_tool.bmp');
@@ -512,11 +638,11 @@ end;
 constructor TShapeTool.Create;
 begin
   inherited;
-  FLineWidthE:= TLineWidthPEditor.Create(TLineWidthParam.Create);
-  FLineStyleE:= TLineStylePEditor.Create(TLineStyleParam.Create);
-  FLineColorE:= TColorPEditor.Create(TColorParam.Create);
-  FShapeColorE:= TColorPEditor.Create(TColorParam.Create);
-  FShapeStyleE:= TShapeStylePEditor.Create(TShapeStyleParam.Create);
+  FLineWidthE:= TLineWidthPEditor.Create;
+  FLineStyleE:= TLineStylePEditor.Create;
+  FLineColorE:= TColorPEditor.Create;
+  FShapeColorE:= TColorPEditor.Create;
+  FShapeStyleE:= TShapeStylePEditor.Create;
 end;
 
 function TShapeTool.GetParams: TParamEditorArray;
@@ -584,14 +710,14 @@ constructor TRegularPolygonTool.Create;
 begin
   inherited;
   FMetadata.Name:= 'RegularPolygon';
-  FAngleCountE:= TAngleCountPEditor.Create(TAngleCountParam.Create);
+  FAngleCountE:= TAngleCountPEditor.Create;
   FMetadata.Bitmap.LoadFromFile('src/regular_tool.bmp');
   FAngleCountE.Parameter.Value:= 3;
 end;
 
 function TRegularPolygonTool.GetParams: TParamEditorArray;
 begin
-  inherited;
+  Result:= inherited GetParams;
   SetLength(Result, Length(Result)+1);
   Result[High(Result)]:= FAngleCountE;
 end;
@@ -625,14 +751,14 @@ end;
 constructor TRoundedRectTool.Create;
 begin
   inherited;
-  FRoundingE:= TRoundingPEditor.Create(TRoundingParam.Create);
+  FRoundingE:= TRoundingPEditor.Create;
   FMetadata.Name:= 'RoundedRect';
   FMetadata.Bitmap.LoadFromFile('src/rect_tool.bmp');
 end;
 
 function TRoundedRectTool.GetParams: TParamEditorArray;
 begin
-  inherited;
+  Result:= inherited GetParams;
   SetLength(Result, Length(Result)+1);
   Result[High(Result)]:= FRoundingE;
 end;

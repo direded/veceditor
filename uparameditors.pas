@@ -5,9 +5,12 @@ unit UParamEditors;
 interface
 
 uses
-  Classes, Controls, SysUtils, StdCtrls, FPCanvas, Spin, UFigureParams, Graphics;
+  Classes, Controls, SysUtils, StdCtrls, FPCanvas, Spin, UFigureParams, Graphics, UUtils;
 
 type
+
+  TParamClass = class of TFigureParam;
+  TParamClassArray = array of TParamClass;
 
   TParamChangingEvent = procedure(Sender: TObject) of object;
   TDrawItemEvent = procedure(Control: TWinControl; AIndex: Integer; ARect: TRect;
@@ -15,6 +18,7 @@ type
 
   TParamEditor = class
   strict protected
+  FParam: TFigureParam;
   const
     UILeft: Integer = 5;
     UITop: Integer = 8;
@@ -24,24 +28,26 @@ type
   end;
 
   TParamEditorArray = array of TParamEditor;
+  TParamEditorClass = class of TParamEditor;
+  TParamEditorClassArray = array of TParamEditorClass;
 
   TZoomModePEditor = class(TParamEditor)
   strict private
-    FParam: TZoomModeParam;
     procedure ParamChange(Sender: TObject);
+    function GetParam: TZoomModeParam;
   public
-    constructor Create(AParam: TZoomModeParam);
-    property Parameter: TZoomModeParam read FParam write FParam;
+    constructor Create;
+    property Parameter: TZoomModeParam read GetParam;
     procedure FillUserInterfaceRaw(AControl: TWinControl; var ALeft: Integer); override;
   end;
 
   TZoomPowerPEditor = class(TParamEditor)
   strict private
-    FParam: TZoomPowerParam;
     procedure ParamChange(Sender: TObject);
+    function GetParam: TZoomPowerParam;
   public
-    constructor Create(AParam: TZoomPowerParam);
-    property Parameter: TZoomPowerParam read FParam write FParam;
+    constructor Create;
+    property Parameter: TZoomPowerParam read GetParam;
     procedure FillUserInterfaceRaw(AControl: TWinControl; var ALeft: Integer); override;
   end;
 
@@ -53,67 +59,88 @@ type
     procedure FillUserInterfaceRaw(AControl: TWinControl; var ALeft: Integer); override;
   end;
 
-  TColorPEditor = class(TParamEditor)
-  strict private
-    FParam: TColorParam;
+  TFigureParamEditor = class (TParamEditor)
+  strict protected
+    IsFirstChange: Boolean;
+    FParams: TFigureParamArray;
+    FOnParamChange: TEventHandler;
   public
-    constructor Create(AParam: TColorParam);
-    property Parameter: TColorParam read FParam write FParam;
+    property OnParamChange: TEventHandler read FOnParamChange write FOnParamChange;
+    procedure AttachParams(AParams: TFigureParamArray);
+    function GetParamType: TFigureParamClass; virtual; abstract;
+  end;
+
+  TFigureParamEditorArray = array of TFigureParamEditor;
+  TFigureParamEditorClass = class of TFigureParamEditor;
+  TFigureParamEditorClassArray = array of TFigureParamEditorClass;
+
+  TColorPEditor = class(TFigureParamEditor)
+  strict private
+    function GetParam: TColorParam;
+  public
+    constructor Create;
+    property Parameter: TColorParam read GetParam;
+    function GetParamType: TFigureParamClass; override;
     procedure FillUserInterfaceRaw(AControl: TWinControl; var ALeft: Integer); override;
   end;
 
-  TLineWidthPEditor = class(TParamEditor)
+  TLineWidthPEditor = class(TFigureParamEditor)
   strict private
-    FParam: TLineWidthParam;
     procedure ParamChange(Sender: TObject);
+    function GetParam: TLineWidthParam;
   public
-    constructor Create(AParam: TLineWidthParam);
-    property Parameter: TLineWidthParam read FParam write FParam;
+    constructor Create;
+    property Parameter: TLineWidthParam read GetParam;
+    function GetParamType: TFigureParamClass; override;
     procedure FillUserInterfaceRaw(AControl: TWinControl; var ALeft: Integer); override;
   end;
 
-  TLineStylePEditor = class(TParamEditor)
+  TLineStylePEditor = class(TFigureParamEditor)
   strict private
-    FParam: TLineStyleParam;
+    function GetParam: TLineStyleParam;
     procedure ParamComboBoxDrawItem(Control: TWinControl; AIndex: Integer; ARect: TRect;
                                     AState: TOwnerDrawState);
     procedure ParamChange(Sender: TObject);
   public
-    constructor Create(AParam: TLineStyleParam);
-    property Parameter: TLineStyleParam read FParam write FParam;
+    constructor Create;
+    property Parameter: TLineStyleParam read GetParam;
+    function GetParamType: TFigureParamClass; override;
     procedure FillUserInterfaceRaw(AControl: TWinControl; var ALeft: Integer); override;
   end;
 
-  TShapeStylePEditor = class(TParamEditor)
+  TShapeStylePEditor = class(TFigureParamEditor)
   strict private
-    FParam: TShapeStyleParam;
+    function GetParam: TShapeStyleParam;
     procedure ParamChange(Sender: TObject);
     procedure ParamComboBoxDrawItem(Control: TWinControl; AIndex: Integer; ARect: TRect;
                                     AState: TOwnerDrawState);
   public
-    constructor Create(AParam: TShapeStyleParam);
-    property Parameter: TShapeStyleParam read FParam write FParam;
+    constructor Create;
+    property Parameter: TShapeStyleParam read GetParam;
+    function GetParamType: TFigureParamClass; override;
     procedure FillUserInterfaceRaw(AControl: TWinControl; var ALeft: Integer); override;
 
   end;
 
-  TAngleCountPEditor = class(TParamEditor)
+  TAngleCountPEditor = class(TFigureParamEditor)
   strict private
-    FParam: TAngleCountParam;
+    function GetParam: TAngleCountParam;
     procedure ParamChange(Sender: TObject);
   public
-    constructor Create(AParam: TAngleCountParam);
-    property Parameter: TAngleCountParam read FParam write FParam;
+    constructor Create;
+    property Parameter: TAngleCountParam read GetParam;
+    function GetParamType: TFigureParamClass; override;
     procedure FillUserInterfaceRaw(AControl: TWinControl; var ALeft: Integer); override;
   end;
 
-  TRoundingPEditor = class(TParamEditor)
+  TRoundingPEditor = class(TFigureParamEditor)
   strict private
-    FParam: TRoundingParam;
+    function GetParam: TRoundingParam;
     procedure ParamChange(Sender: TObject);
   public
-    constructor Create(AParam: TRoundingParam);
-    property Parameter: TRoundingParam read FParam write FParam;
+    constructor Create;
+    property Parameter: TRoundingParam read GetParam;
+    function GetParamType: TFigureParamClass; override;
     procedure FillUserInterfaceRaw(AControl: TWinControl; var ALeft: Integer); override;
   end;
 
@@ -125,6 +152,7 @@ function CreateSpinEdit(AOwner: TWinControl; APoint: TPoint; AMin, AMax: Integer
                               AStartValue: Integer; AEvent: TParamChangingEvent): TSpinEdit;
 function CreateFloatSpinEdit(AOwner: TWinControl; APoint: TPoint; AMin, AMax: Double;
                                    AStartValue: Double; AEvent: TParamChangingEvent): TFloatSpinEdit;
+function GetFigureEditorClasses: TFigureParamEditorClassArray;
 
 implementation
 
@@ -140,35 +168,45 @@ begin
   FillUserInterfaceRaw(AControl, CurrentLeft);
 end;
 
-constructor TZoomPowerPEditor.Create(AParam: TZoomPowerParam);
+constructor TZoomPowerPEditor.Create;
 begin
-  FParam:= AParam;
+  FParam:= TZoomPowerParam.Create;
 end;
 
 procedure TZoomPowerPEditor.FillUserInterfaceRaw(AControl: TWinControl; var ALeft: Integer);
 begin
-  CreateFloatSpinEdit(AControl, Point(ALeft, UITop), 0.1, 2, FParam.Value, @ParamChange);
+  CreateFloatSpinEdit(AControl, Point(ALeft, UITop), 0.1, 2, GetParam.Value, @ParamChange);
 end;
 
 procedure TZoomModePEditor.ParamChange(Sender: TObject);
 begin
-  FParam.Value:= TZoomModeParam.TZoomModes(TComboBox(Sender).ItemIndex);
+  GetParam.Value:= TZoomModeParam.TZoomModes(TComboBox(Sender).ItemIndex);
 end;
 
-constructor TZoomModePEditor.Create(AParam: TZoomModeParam);
+function TZoomModePEditor.GetParam: TZoomModeParam;
 begin
-  FParam:= AParam;
+  Result:= TZoomModeParam(FParam);
+end;
+
+constructor TZoomModePEditor.Create;
+begin
+  FParam:= TZoomModeParam.Create;
 end;
 
 procedure TZoomModePEditor.FillUserInterfaceRaw(AControl: TWinControl; var ALeft: Integer);
 const ZoomModes: array [0..2] of String = ('Zoom in', 'Zoom out', 'Zoom space');
 begin
-  CreateComboBox(AControl, Point(ALeft, UITop), ZoomModes, Integer(FParam.Value), @ParamChange);
+  CreateComboBox(AControl, Point(ALeft, UITop), ZoomModes, Integer(GetParam.Value), @ParamChange);
 end;
 
 procedure TZoomPowerPEditor.ParamChange(Sender: TObject);
 begin
-  FParam.Value:= TFloatSpinEdit(Sender).Value;
+  GetParam.Value:= TFloatSpinEdit(Sender).Value;
+end;
+
+function TZoomPowerPEditor.GetParam: TZoomPowerParam;
+begin
+  Result:= TZoomPowerParam(FParam);
 end;
 
 procedure TSelectAllPEditor.FillUserInterfaceRaw(AControl: TWinControl; var ALeft: Integer);
@@ -183,9 +221,30 @@ begin
   Btn.OnClick:= FSelectAllBtnClick;
 end;
 
-constructor TColorPEditor.Create(AParam: TColorParam);
+procedure TFigureParamEditor.AttachParams(AParams: TFigureParamArray);
+var
+  paramClass: TFigureParamClass;
 begin
-  FParam:= AParam;
+  if Length(FParams) = 0 then IsFirstChange:= true;
+  FParams:= AParams;
+  paramClass:= GetParamType;
+  FParam:= AParams[0] as paramClass;
+end;
+
+function TColorPEditor.GetParam: TColorParam;
+begin
+  Result:= TColorParam(FParam);
+end;
+
+constructor TColorPEditor.Create;
+begin
+  IsFirstChange:= true;
+  FParam:= TColorParam.Create;
+end;
+
+function TColorPEditor.GetParamType: TFigureParamClass;
+begin
+  Result:= TColorParam;
 end;
 
 procedure TColorPEditor.FillUserInterfaceRaw(AControl: TWinControl; var ALeft: Integer);
@@ -194,18 +253,39 @@ begin
 end;
 
 procedure TLineWidthPEditor.ParamChange(Sender: TObject);
+var
+  i: Integer;
 begin
-  FParam.Value:= TSpinEdit(Sender).Value;
+  GetParam.Value:= TSpinEdit(Sender).Value;
+  for i:= 0 to High(FParams) do
+    TLineWidthParam(FParams[i]).Value:= TSpinEdit(Sender).Value;
+  if Assigned(FOnParamChange) then FOnParamChange;
 end;
 
-constructor TLineWidthPEditor.Create(AParam: TLineWidthParam);
+function TLineWidthPEditor.GetParam: TLineWidthParam;
 begin
-  FParam:= AParam;
+  Result:= TLineWidthParam(FParam);
+end;
+
+constructor TLineWidthPEditor.Create;
+begin
+  IsFirstChange:= true;
+  FParam:= TLineWidthParam.Create;
+end;
+
+function TLineWidthPEditor.GetParamType: TFigureParamClass;
+begin
+  Result:= TLineWidthParam;
 end;
 
 procedure TLineWidthPEditor.FillUserInterfaceRaw(AControl: TWinControl; var ALeft: Integer);
 begin
-  CreateSpinEdit(AControl, Point(ALeft, UITop), 1, 100, FParam.Value, @ParamChange);
+  CreateSpinEdit(AControl, Point(ALeft, UITop), 1, 100, GetParam.Value, @ParamChange);
+end;
+
+function TLineStylePEditor.GetParam: TLineStyleParam;
+begin
+  Result:= TLineStyleParam(FParam);
 end;
 
 procedure TLineStylePEditor.ParamComboBoxDrawItem(Control: TWinControl; AIndex: Integer; ARect: TRect;
@@ -219,24 +299,45 @@ begin
 end;
 
 procedure TLineStylePEditor.ParamChange(Sender: TObject);
+var
+  i: Integer;
 begin
-  FParam.Value:= TFPPenStyle(TComboBox(Sender).ItemIndex);
+  GetParam.Value:= TFPPenStyle(TComboBox(Sender).ItemIndex);
+  for i:= 0 to High(FParams) do
+    TLineStyleParam(FParams[i]).Value:= TFPPenStyle(TComboBox(Sender).ItemIndex);
+  if Assigned(FOnParamChange) then FOnParamChange;
 end;
 
-constructor TLineStylePEditor.Create(AParam: TLineStyleParam);
+constructor TLineStylePEditor.Create;
 begin
-  FParam:= AParam;
+  IsFirstChange:= true;
+  FParam:= TLineStyleParam.Create;
+end;
+
+function TLineStylePEditor.GetParamType: TFigureParamClass;
+begin
+  Result:= TLineStyleParam;
 end;
 
 procedure TLineStylePEditor.FillUserInterfaceRaw(AControl: TWinControl; var ALeft: Integer);
 begin
-  CreateComboBox(AControl, Point(ALeft, UITop), 5, Integer(FParam.Value), @ParamComboBoxDrawItem,
+  CreateComboBox(AControl, Point(ALeft, UITop), 5, Integer(GetParam.Value), @ParamComboBoxDrawItem,
                  @ParamChange);
 end;
 
-procedure TShapeStylePEditor.ParamChange(Sender: TObject);
+function TShapeStylePEditor.GetParam: TShapeStyleParam;
 begin
-  FParam.Value:= TFPBrushStyle(TComboBox(Sender).ItemIndex);
+  Result:= TShapeStyleParam(FParam);
+end;
+
+procedure TShapeStylePEditor.ParamChange(Sender: TObject);
+var
+  i: Integer;
+begin
+  GetParam.Value:= TFPBrushStyle(TComboBox(Sender).ItemIndex);
+  for i:= 0 to High(FParams) do
+    TShapeStyleParam(FParams[i]).Value:= TFPBrushStyle(TComboBox(Sender).ItemIndex);
+  if Assigned(FOnParamChange) then FOnParamChange;
 end;
 
 procedure TShapeStylePEditor.ParamComboBoxDrawItem(Control: TWinControl; AIndex: Integer; ARect: TRect;
@@ -256,45 +357,83 @@ begin
   TComboBox(Control).Canvas.Rectangle(ARect);
 end;
 
+function TShapeStylePEditor.GetParamType: TFigureParamClass;
+begin
+  Result:= TShapeStyleParam;
+end;
+
 procedure TShapeStylePEditor.FillUserInterfaceRaw(AControl: TWinControl; var ALeft: Integer);
 begin
-  CreateComboBox(AControl, Point(ALeft, UITop), 8, Integer(FParam.Value),
+  CreateComboBox(AControl, Point(ALeft, UITop), 8, Integer(GetParam.Value),
                  @ParamComboBoxDrawItem, @ParamChange);
 end;
 
-constructor TShapeStylePEditor.Create(AParam: TShapeStyleParam);
+constructor TShapeStylePEditor.Create;
 begin
-  FParam:= AParam;
+  IsFirstChange:= true;
+  FParam:= TShapeStyleParam.Create;
+end;
+
+function TAngleCountPEditor.GetParam: TAngleCountParam;
+begin
+  Result:= TAngleCountParam(FParam);
 end;
 
 procedure TAngleCountPEditor.ParamChange(Sender: TObject);
+var
+  i: Integer;
 begin
-  FParam.Value:= TSpinEdit(Sender).Value;
+  GetParam.Value:= TSpinEdit(Sender).Value;
+  for i:= 0 to High(FParams) do
+    TAngleCountParam(FParams[i]).Value:= TSpinEdit(Sender).Value;
+  if Assigned(FOnParamChange) then FOnParamChange;
 end;
 
-constructor TAngleCountPEditor.Create(AParam: TAngleCountParam);
+constructor TAngleCountPEditor.Create;
 begin
-  FParam:= AParam;
+  IsFirstChange:= true;
+  FParam:= TAngleCountParam.Create;
+end;
+
+function TAngleCountPEditor.GetParamType: TFigureParamClass;
+begin
+  Result:= TAngleCountParam;
 end;
 
 procedure TAngleCountPEditor.FillUserInterfaceRaw(AControl: TWinControl; var ALeft: Integer);
 begin
-  CreateSpinEdit(AControl, Point(ALeft, UITop), 3, 1000, FParam.Value, @ParamChange);
+  CreateSpinEdit(AControl, Point(ALeft, UITop), 3, 1000, GetParam.Value, @ParamChange);
+end;
+
+function TRoundingPEditor.GetParam: TRoundingParam;
+begin
+  Result:= TRoundingParam(FParam);
 end;
 
 procedure TRoundingPEditor.ParamChange(Sender: TObject);
+var
+  i: Integer;
 begin
-  FParam.Value:= TSpinEdit(Sender).Value;
+  GetParam.Value:= TSpinEdit(Sender).Value;
+  for i:= 0 to High(FParams) do
+    TRoundingParam(FParams[i]).Value:= TSpinEdit(Sender).Value;
+  if Assigned(FOnParamChange) then FOnParamChange;
 end;
 
-constructor TRoundingPEditor.Create(AParam: TRoundingParam);
+constructor TRoundingPEditor.Create;
 begin
-  FParam:= AParam;
+  IsFirstChange:= true;
+  FParam:= TRoundingParam.Create;
+end;
+
+function TRoundingPEditor.GetParamType: TFigureParamClass;
+begin
+  Result:= TRoundingParam;
 end;
 
 procedure TRoundingPEditor.FillUserInterfaceRaw(AControl: TWinControl; var ALeft: Integer);
 begin
-  CreateSpinEdit(AControl, Point(ALeft, UITop), 0, 1000, FParam.Value, @ParamChange);
+  CreateSpinEdit(AControl, Point(ALeft, UITop), 0, 1000, GetParam.Value, @ParamChange);
 end;
 
 function CreateComboBox(AOwner: TWinControl; APoint: TPoint; AItems: array of String;
@@ -371,7 +510,16 @@ begin
   end;
 end;
 
-
+function GetFigureEditorClasses: TFigureParamEditorClassArray;
+begin
+  SetLength(Result, 6);
+  Result[0]:= TColorPEditor;
+  Result[1]:= TLineStylePEditor;
+  Result[2]:= TLineWidthPEditor;
+  Result[3]:= TShapeStylePEditor;
+  Result[4]:= TAngleCountPEditor;
+  Result[5]:= TRoundingPEditor;
+end;
 
 end.
 

@@ -15,6 +15,8 @@ type
 
   end;
 
+  TFigureParamClass = class of TFigureParam;
+  TFigureParamClassArray = array of TFigureParamClass;
   TFigureParamArray = array of TFigureParam;
 
   TColorParam = class(TFigureParam)
@@ -108,6 +110,8 @@ type
   PPenParams = ^TPenParams;
   PBrushParams = ^TBrushParams;
 
+  procedure Push(Element: TFigureParam; Arr: TFigureParamArray);
+
   function MakeFigureColors(Pen, Brush: TColor): TFigureColors;
 
   operator =(A, B: TPenParams): Boolean;
@@ -119,6 +123,12 @@ type
   function GetCanvasParams(Brush: TBrush): TBrushParams;
 
 implementation
+
+procedure Push(Element: TFigureParam; Arr: TFigureParamArray);
+begin
+  SetLength(Arr, Length(Arr)+1);
+  Arr[High(Arr)]:= Element;
+end;
 
 function MakeFigureColors(Pen, Brush: TColor): TFigureColors;
 begin

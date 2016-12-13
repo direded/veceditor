@@ -103,6 +103,7 @@ type
     property AngleCountParam: TAngleCountParam read FAngleCountParam;
     constructor Create;
     function IsValid: Boolean; override;
+    function GetParams: TFigureParamArray; override;
     function IsPointInclude(APoint: TDoublePoint): Boolean; override; // Doesn't work this nonregular polygons! Need to fix!
   end;
 
@@ -135,6 +136,7 @@ type
     property RoundingParam: TRoundingParam read FRoundingParam;
     constructor Create;
     function IsPointInclude(APoint: TDoublePoint): Boolean; override;
+    function GetParams: TFigureParamArray; override;
   end;
 
   TFigures = class
@@ -142,10 +144,14 @@ type
     FContent: TFigureArray;
     FFigureAddEvent: TEventHandler;
     FBounds: TDoubleRect;
+    function GetFigure(AIndex: Integer): TFigure;
+    procedure SetFigure(AIndex: Integer; AFigure: TFigure);
     procedure SetBounds;
   public
     property OnFigureAdd: TEventHandler read FFigureAddEvent write FFigureAddEvent;
     constructor Create;
+    property Figure[AIndex: Integer]: TFigure read GetFigure write SetFigure; default;
+    property Content: TFigureArray read FContent write FContent;
     procedure SetSelectionFigure(APoint: TDoublePoint; AChangeSelection: TSelectionChangeProcedure);
     procedure SetSelectionFullRectFigures(A, B: TDoublePoint; AChangeSelection: TSelectionChangeProcedure);
     procedure SetSelectionPartRectFigures(A, B: TDoublePoint; AChangeSelection: TSelectionChangeProcedure);
@@ -448,6 +454,13 @@ begin
   Result:= FPoints[0] <> FPoints[1];
 end;
 
+function TRegularPolygonFigure.GetParams: TFigureParamArray;
+begin
+  Result:= inherited GetParams;
+  SetLength(Result, Length(Result)+1);
+  Result[High(Result)]:= FAngleCountParam;
+end;
+
 function TRegularPolygonFigure.IsPointInclude(APoint: TDoublePoint): Boolean;
 var
   i: Integer;
@@ -562,6 +575,13 @@ begin
   Result :=
     InRange(APoint.X, FBounds[0].X, FBounds[1].X) and
     InRange(APoint.Y, FBounds[0].Y, FBounds[1].Y);
+end;
+
+function TRoundedRectFigure.GetParams: TFigureParamArray;
+begin
+  Result:= inherited GetParams;
+  SetLength(Result, Length(Result)+1);
+  Result[High(Result)]:= FRoundingParam;
 end;
 
 constructor TFigures.Create;
@@ -682,23 +702,34 @@ begin
   FContent[High(FContent)]:= AFigure;
 end;
 
+
+function TFigures.GetFigure(AIndex: Integer): TFigure;
+begin
+  Result:= Content[AIndex];
+end;
+
+procedure TFigures.SetFigure(AIndex: Integer; AFigure: TFigure);
+begin
+  Content[AIndex]:= AFigure;
+end;
+
 procedure TFigures.SetBounds;
 var
-  Figure: TFigure;
+  f: TFigure;
   Min, Max: TDoublePoint;
 begin
   if FContent = nil then exit;
   Min:= FContent[0].Bounds[0];
   Max:= FContent[0].Bounds[1];
-  for Figure in FContent do begin
-    if Min.X > Figure.Bounds[0].X then
-      Min.X:= Figure.Bounds[0].X;
-    if Min.Y > Figure.Bounds[0].Y then
-      Min.Y:= Figure.Bounds[0].Y;
-    if Max.X < Figure.Bounds[1].X then
-      Max.X:= Figure.Bounds[1].X;
-    if Max.Y < Figure.Bounds[1].Y then
-      Max.Y:= Figure.Bounds[1].Y;
+  for f in FContent do begin
+    if Min.X > f.Bounds[0].X then
+      Min.X:= f.Bounds[0].X;
+    if Min.Y > f.Bounds[0].Y then
+      Min.Y:= f.Bounds[0].Y;
+    if Max.X < f.Bounds[1].X then
+      Max.X:= f.Bounds[1].X;
+    if Max.Y < f.Bounds[1].Y then
+      Max.Y:= f.Bounds[1].Y;
   end;
   Min.X:= Min.X-5; Min.Y:= Min.Y-5;
   Max.X:= Max.X+5; Max.Y:= Max.Y+5;
@@ -752,10 +783,10 @@ end;
 
 destructor TFigures.Destroy;
 var
-  Figure: TFigure;
+  f: TFigure;
 begin
-  for Figure in FContent do
-    Figure.Free;
+  for f in FContent do
+    f.Free;
 end;
 
 end.
