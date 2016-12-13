@@ -138,8 +138,6 @@ type
   end;
 
   TRegularPolygonTool = class(TShapeTool)
-  strict private
-    FFirstPoint: TDoublePoint;
   strict protected
     procedure CreateFigure; override;
   public
@@ -532,7 +530,6 @@ begin
   CreateFigure;
   InitializeFigure(APoint);
   SetFigureParams;
-  FFirstPoint:= APoint;      // ?
   FFigure.Points[1]:= APoint;
   TRegularPolygonFigure(FFigure).AngleCount:= TRegularPolygonToolParam(FParams[2]).AngleCount;
 end;
@@ -543,12 +540,6 @@ var
   vec: TDoublePoint;
 begin
   FFigure.Points[1]:= APoint;
-  {vec:= APoint - FFirstPoint;
-  with TRegularPolygonToolParam(FParams[2]) do
-    for i:= 0 to AngleCount-1 do begin
-      FFigure.Points[i]:= vec+FFirstPoint;
-      vec.Rotate(2*pi/AngleCount);
-    end;}
 end;
 
 procedure TRoundedRectTool.CreateFigure;
