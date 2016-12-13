@@ -86,11 +86,15 @@ type
     function IsPointInclude(APoint: TDoublePoint): Boolean; override;
   end;
 
-  TPolygonFigure = class(TShapeFigure)
+  TRegularPolygonFigure = class(TShapeFigure)
   strict protected
+    FAngleCountParam: TAngleCountParam;
     procedure DrawSelection(APaintSpace: TPaintSpace); override;
     procedure DrawRaw(APaintSpace: TPaintSpace); override;
+    function GetAngleCount: Integer;
+    procedure SetAngleCount(AValue: Integer);
   public
+    property AngleCount: Integer read GetAngleCount write SetAngleCount;
     constructor Create;
     function IsValid: Boolean; override;
     function IsPointInclude(APoint: TDoublePoint): Boolean; override; // Doesn't work this nonregular polygons! Need to fix!
@@ -390,7 +394,7 @@ begin
   Exit(false);
 end;
 
-procedure TPolygonFigure.DrawSelection(APaintSpace: TPaintSpace);
+procedure TRegularPolygonFigure.DrawSelection(APaintSpace: TPaintSpace);
 var
   p: TDoublePoint;
 begin
@@ -401,21 +405,43 @@ begin
   end;
 end;
 
-procedure TPolygonFigure.DrawRaw(APaintSpace: TPaintSpace);
+procedure TRegularPolygonFigure.DrawRaw(APaintSpace: TPaintSpace);
+var
+  vec: TDoublePoint;
+  ps: TDoublePointArray;
+  i: Integer;
 begin
-  APaintSpace.Canvas.Polygon(APaintSpace.ToLocal(FPoints));
+  vec:= FPoints[1]-FPoints[0];
+  SetLength(ps, AngleCount);
+  for i:= 0 to AngleCount-1 do begin
+    ps[i]:= vec+FPoints[0];
+    vec.Rotate(2*pi/AngleCount);
+  end;
+  APaintSpace.Canvas.Polygon(APaintSpace.ToLocal(ps));
 end;
 
-constructor TPolygonFigure.Create;
+function TRegularPolygonFigure.GetAngleCount: Integer;
 begin
+  Result:= FAngleCountParam.Value;
 end;
 
-function TPolygonFigure.IsValid: Boolean;
+procedure TRegularPolygonFigure.SetAngleCount(AValue: Integer);
+begin
+  FAngleCountParam.Value:= AValue;
+end;
+
+constructor TRegularPolygonFigure.Create;
+begin
+  inherited;
+  FAngleCountParam:= TAngleCountParam.Create;
+end;
+
+function TRegularPolygonFigure.IsValid: Boolean;
 begin
   Result:= FPoints[0] <> FPoints[1];
 end;
 
-function TPolygonFigure.IsPointInclude(APoint: TDoublePoint): Boolean;
+function TRegularPolygonFigure.IsPointInclude(APoint: TDoublePoint): Boolean;
 var
   i: Integer;
 begin

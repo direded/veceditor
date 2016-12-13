@@ -510,7 +510,7 @@ end;
 
 procedure TRegularPolygonTool.CreateFigure;
 begin
-  FFigure:= TPolygonFigure.Create;
+  FFigure:= TRegularPolygonFigure.Create;
   FFigure.SetPointsLength(TRegularPolygonToolParam(FParams[2]).AngleCount);
   FFigures.AddFigure(FFigure);
 end;
@@ -532,7 +532,9 @@ begin
   CreateFigure;
   InitializeFigure(APoint);
   SetFigureParams;
-  FFirstPoint:= APoint;
+  FFirstPoint:= APoint;      // ?
+  FFigure.Points[1]:= APoint;
+  TRegularPolygonFigure(FFigure).AngleCount:= TRegularPolygonToolParam(FParams[2]).AngleCount;
 end;
 
 procedure TRegularPolygonTool.MouseMove(APoint: TDoublePoint; AShift: TShiftState);
@@ -540,12 +542,13 @@ var
   i: Integer;
   vec: TDoublePoint;
 begin
-  vec:= APoint - FFirstPoint;
+  FFigure.Points[1]:= APoint;
+  {vec:= APoint - FFirstPoint;
   with TRegularPolygonToolParam(FParams[2]) do
     for i:= 0 to AngleCount-1 do begin
       FFigure.Points[i]:= vec+FFirstPoint;
       vec.Rotate(2*pi/AngleCount);
-    end;
+    end;}
 end;
 
 procedure TRoundedRectTool.CreateFigure;
