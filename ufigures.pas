@@ -23,10 +23,13 @@ type
     class procedure SetSelectionEllipseParams(APen: TPen; ABrush: TBrush);
     procedure DrawSelection(APaintSpace: TPaintSpace); virtual; abstract;
     procedure SetSelectionParams(ACanvas:TCanvas); virtual; abstract;
+    procedure LoadParams(var AParamStr: String); virtual; //abstract;
+    procedure LoadPoints(var AParamStr: String);
   public
     property Points: TDoublePointArray read FPoints write FPoints;
     property Bounds: TTwoDoublePointsArray read FBounds;
     property Selected: Boolean read FSelected write FSelected;
+    constructor Create;
     function IsPointInclude(APoint: TDoublePoint): Boolean; virtual; abstract;
     function IsFullInRect(A, B: TDoublePoint): Boolean; virtual; abstract;
     function IsPartInRect(A, B: TDoublePoint): Boolean; virtual; abstract;
@@ -36,10 +39,14 @@ type
     procedure IncreasePointsLength;
     procedure Bake; virtual;
     function GetParams: TFigureParamArray; virtual; abstract;
+    procedure Save(var AFile: TextFile); virtual;
     procedure Draw(APaintSpace: TPaintSpace); virtual;
+    procedure Load(AParamStr: String);
   end;
 
   TSelectionChangeProcedure = procedure(AFigure: TFigure) of object;
+  TFigureClass = class of TFigure;
+  TFigureClassArray = array of TFigureClass;
   TFigureArray = array of TFigure;
 
   TLineFigure = class(TFigure)
@@ -53,6 +60,7 @@ type
     procedure DrawSelection(APaintSpace: TPaintSpace); override;
     procedure SetFigureParams(ACanvas: TCanvas); override;
     procedure DrawRaw(APaintSpace: TPaintSpace); override;
+    procedure LoadParams(var AParamStr: String); override;
   public
     property PenParams: TPenParams read GetLineParams;
     constructor Create;
@@ -64,6 +72,7 @@ type
     function IsFullInRect(A, B: TDoublePoint): Boolean; override;
     function IsPartInRect(A, B: TDoublePoint): Boolean; override;
     function IsValid: Boolean; override;
+    procedure Save(var AFile: TextFile); override;
   end;
 
   TShapeFigure = class(TLineFigure)
@@ -74,6 +83,7 @@ type
     procedure SetFigureParams(ACanvas: TCanvas); override;
     function GetBrushParams: TBrushParams;
     procedure SetBrushParams(AValue: TBrushParams);
+    procedure LoadParams(var AParamStr: String); override;
   public
     constructor Create;
     property ShapeColor: TColorParam read FShapeColor;
@@ -82,6 +92,7 @@ type
     property BrushParams: TBrushParams read GetBrushParams;
     function GetParams: TFigureParamArray; override;
     function IsValid: Boolean; override;
+    procedure Save(var AFile: TextFile); override;
   end;
 
   TRectFigure = class(TShapeFigure)
@@ -98,13 +109,15 @@ type
     procedure DrawRaw(APaintSpace: TPaintSpace); override;
     function GetAngleCount: Integer;
     procedure SetAngleCount(AValue: Integer);
+    procedure LoadParams(var AParamStr: String); override;
   public
     property AngleCount: Integer read GetAngleCount;
     property AngleCountParam: TAngleCountParam read FAngleCountParam;
     constructor Create;
     function IsValid: Boolean; override;
     function GetParams: TFigureParamArray; override;
-    function IsPointInclude(APoint: TDoublePoint): Boolean; override; // Doesn't work this nonregular polygons! Need to fix!
+    function IsPointInclude(APoint: TDoublePoint): Boolean; override;
+    procedure Save(var AFile: TextFile); override;
   end;
 
   TRectSplitOffFigure = class(TRectFigure)
@@ -131,12 +144,14 @@ type
   strict protected
     procedure DrawSelection(APaintSpace: TPaintSpace); override;
     procedure DrawRaw(APaintSpace: TPaintSpace); override;
+    procedure LoadParams(var AParamStr: String); override;
 	public
     property Rounding: Integer read GetRounding write SetRounding;
     property RoundingParam: TRoundingParam read FRoundingParam;
     constructor Create;
     function IsPointInclude(APoint: TDoublePoint): Boolean; override;
     function GetParams: TFigureParamArray; override;
+    procedure Save(var AFile: TextFile); override;
   end;
 
   TFigures = class
@@ -147,6 +162,8 @@ type
     function GetFigure(AIndex: Integer): TFigure;
     procedure SetFigure(AIndex: Integer; AFigure: TFigure);
     procedure SetBounds;
+    function CompareFigureClass(AClassName: String): TFigureClass;
+    function CreateFigure(AClassName: String): TFigure;
   public
     property OnFigureAdd: TEventHandler read FFigureAddEvent write FFigureAddEvent;
     constructor Create;
@@ -169,10 +186,13 @@ type
     procedure BakeLastFigure;
     procedure GetBounds(var AMin: TDoublePoint; var AMax: TDoublePoint);
   	procedure Draw(APaintSpace: TPaintSpace);
+    procedure Save(var AFile: TextFile);
+    procedure Load(var AFile: TextFile);
     destructor Destroy; override;
   end;
 
   procedure SetBounds(var ABounds: TTwoDoublePointsArray; APoint: TDoublePoint);
+  function GetFigureClasses: TFigureClassArray;
 
 implementation
 
@@ -188,6 +208,16 @@ begin
     ABounds[1].Y:= APoint.Y;
 end;
 
+function GetFigureClasses: TFigureClassArray;
+begin
+  SetLength(Result, 5);
+  Result[0]:= TLineFigure;
+  Result[1]:= TRectFigure;
+  Result[2]:= TEllipseFigure;
+  Result[3]:= TRegularPolygonFigure;
+  Result[4]:= TRoundedRectFigure;
+end;
+
 class procedure TFigure.SetSelectionEllipseParams(APen: TPen; ABrush: TBrush);
 begin
   APen.Color:= RGBToColor(100, 100, 100);
@@ -197,9 +227,39 @@ begin
   ABrush.Color:= clWhite;
 end;
 
+procedure TFigure.LoadParams(var AParamStr: String);
+begin
+
+end;
+
+procedure TFigure.LoadPoints(var AParamStr: String);
+var
+  i: Integer;
+  str, pointsStr: String;
+begin
+  AParamStr:= Trim(AParamStr);
+  str:= Trim(LeftStr(AParamStr, Pos(' ', AParamStr)-1));
+  pointsStr:= Trim(RightStr(AParamStr, Length(AParamStr)-Length(str)-1));
+  SetLength(FPoints, StrToInt(str));
+  for i:= 0 to High(FPoints) do begin
+    str:= Trim(LeftStr(pointsStr, Pos(' ', pointsStr)-1));
+    pointsStr:= Trim(RightStr(pointsStr, Length(pointsStr)-Length(str)-1));
+    FPoints[i].X:= StrToFloat(str);
+    str:= Trim(LeftStr(pointsStr, Pos(' ', pointsStr)-1));
+    pointsStr:= Trim(RightStr(pointsStr, Length(pointsStr)-Length(str)-1));
+    FPoints[i].Y:= StrToFloat(str);
+  end;
+  AParamStr:= Trim(pointsStr)+' ';
+end;
+
 procedure TFigure.IncreasePointsLength;
 begin
   SetLength(FPoints, Length(FPoints)+1);
+end;
+
+constructor TFigure.Create;
+begin
+  Writeln('TFigure.Create triggered');
 end;
 
 procedure TFigure.Move(AValue: TDoublePoint);
@@ -227,6 +287,17 @@ begin
     SetBounds(FBounds, P);
 end;
 
+procedure TFigure.Save(var AFile: TextFile);
+var
+  p: TDoublePoint;
+begin
+  Write(AFile, Length(FPoints), ' ');
+  for p in FPoints do begin
+    Write(AFile, p.X, ' ');
+    Write(AFile, p.Y, ' ');
+  end;
+end;
+
 procedure TFigure.Draw(APaintSpace: TPaintSpace);
 begin
   with APaintSpace do begin
@@ -237,6 +308,12 @@ begin
     if FSelected then
       DrawSelection(APaintSpace);
   end;
+end;
+
+procedure TFigure.Load(AParamStr: String);
+begin
+  LoadPoints(AParamStr);
+  LoadParams(AParamStr);
 end;
 
 procedure TLineFigure.DrawSelection(APaintSpace: TPaintSpace);
@@ -279,10 +356,11 @@ end;
 
 constructor TLineFigure.Create;
 begin
+  writeln('TLineFigure.Create executed');
   SetLength(FPoints, 2);
   FLineWidth:= TLineWidthParam.Create;
   FLineStyle:= TLineStyleParam.Create;
-  FLineColor:= TColorParam.Create;;
+  FLineColor:= TColorParam.Create;
 end;
 
 function TLineFigure.GetParams: TFigureParamArray;
@@ -332,6 +410,37 @@ begin
   Result:= (Length(FPoints)>=2);
 end;
 
+procedure TLineFigure.Save(var AFile: TextFile);
+begin
+  inherited Save(AFile);
+  Write(AFile, FLineColor.Value, ' ');
+  Write(AFile, Integer(FLineStyle.Value), ' ');
+  Write(AFile, FLineWidth.Value, ' ');
+end;
+
+procedure TLineFigure.LoadParams(var AParamStr: String);
+var
+  str, otherStr: String;
+begin
+  str:= LeftStr(AParamStr, Pos(' ', AParamStr)-1);
+  otherStr:= RightStr(AParamStr, Length(AParamStr)-Length(str)-1);
+  FLineColor.Value:= StringToColor(str);
+  str:= LeftStr(otherStr, Pos(' ', otherStr)-1);
+  otherStr:= RightStr(otherStr, Length(otherStr)-Length(str)-1);
+  FLineStyle.Value:= TFPPenStyle(StrToInt(str));
+  str:= LeftStr(otherStr, Pos(' ', otherStr)-1);
+  otherStr:= RightStr(otherStr, Length(otherStr)-Length(str)-1);
+  FLineWidth.Value:= StrToInt(str);
+  AParamStr:= otherStr;
+end;
+
+procedure TShapeFigure.Save(var AFile: TextFile);
+begin
+  inherited Save(AFile);
+  Write(AFile, FShapeColor.Value, ' ');
+  Write(AFile, Integer(FShapeStyle.Value), ' ');
+end;
+
 procedure TShapeFigure.SetSelectionParams(ACanvas: TCanvas);
 begin
   ACanvas.Pen.Width:= ACanvas.Pen.Width+1;
@@ -356,6 +465,21 @@ begin
   FShapeStyle.Value:= AValue.Style;
 end;
 
+procedure TShapeFigure.LoadParams(var AParamStr: String);
+var
+  str, otherStr: String;
+begin
+  inherited LoadParams(AParamStr);
+  otherStr:= AParamStr;
+  str:= LeftStr(otherStr, Pos(' ', otherStr)-1);
+  otherStr:= RightStr(otherStr, Length(otherStr)-Length(str)-1);
+  FShapeColor.Value:= StringToColor(str);
+  str:= LeftStr(otherStr, Pos(' ', otherStr)-1);
+  otherStr:= RightStr(otherStr, Length(otherStr)-Length(str)-1);
+  FShapeStyle.Value:= TFPBrushStyle(StrToInt(str));
+  AParamStr:= otherStr;
+end;
+
 function TShapeFigure.IsPartInRect(A, B: TDoublePoint): Boolean;
 var
   p: TDoublePoint;
@@ -370,6 +494,7 @@ end;
 constructor TShapeFigure.Create;
 begin
   inherited Create;
+  writeln('TShapeFigure.Create executed');
   FShapeColor:= TColorParam.Create;
   FShapeStyle:= TShapeStyleParam.Create;
 end;
@@ -443,6 +568,18 @@ begin
   FAngleCountParam.Value:= AValue;
 end;
 
+procedure TRegularPolygonFigure.LoadParams(var AParamStr: String);
+var
+  str, otherStr: String;
+begin
+  inherited LoadParams(AParamStr);
+  otherStr:= AParamStr;
+  str:= LeftStr(otherStr, Pos(' ', otherStr)-1);
+  otherStr:= RightStr(otherStr, Length(otherStr)-Length(str)-1);
+  FAngleCountParam.Value:= StrToInt(str);
+  AParamStr:= otherStr;
+end;
+
 constructor TRegularPolygonFigure.Create;
 begin
   inherited;
@@ -463,14 +600,28 @@ end;
 
 function TRegularPolygonFigure.IsPointInclude(APoint: TDoublePoint): Boolean;
 var
+  vec: TDoublePoint;
+  ps: TDoublePointArray;
   i: Integer;
 begin
-  for i:= 0 to High(FPoints)-1 do
-    if GetVecMultiplyLength(FPoints[i+1]-FPoints[i], APoint-FPoints[i]) < 0 then
+  vec:= FPoints[1]-FPoints[0];
+  SetLength(ps, AngleCount);
+  for i:= 0 to AngleCount-1 do begin
+    ps[i]:= vec+FPoints[0];
+    vec.Rotate(2*pi/AngleCount);
+  end;
+  for i:= 0 to High(ps)-1 do
+    if GetVecMultiplyLength(ps[i+1]-ps[i], APoint-ps[i]) < 0 then
       Exit(false);
-  if GetVecMultiplyLength(FPoints[0]-FPoints[High(FPoints)], APoint-FPoints[High(FPoints)]) < 0 then
+  if GetVecMultiplyLength(ps[0]-ps[High(ps)], APoint-ps[High(ps)]) < 0 then
     Exit(false);
   Result:= true;
+end;
+
+procedure TRegularPolygonFigure.Save(var AFile: TextFile);
+begin
+  inherited Save(AFile);
+  Write(AFile, FAngleCountParam.Value, ' ');
 end;
 
 constructor TRectSplitOffFigure.Create;
@@ -564,6 +715,18 @@ begin
                      ToLocal(FPoints[1]).X, ToLocal(FPoints[1]).Y, Rounding, Rounding);
 end;
 
+procedure TRoundedRectFigure.LoadParams(var AParamStr: String);
+var
+  str, otherStr: String;
+begin
+  inherited LoadParams(AParamStr);
+  otherStr:= AParamStr;
+  str:= LeftStr(otherStr, Pos(' ', otherStr)-1);
+  otherStr:= RightStr(otherStr, Length(otherStr)-Length(str)-1);
+  FRoundingParam.Value:= StrToInt(str);
+  AParamStr:= otherStr;
+end;
+
 constructor TRoundedRectFigure.Create;
 begin
   inherited Create;
@@ -582,6 +745,12 @@ begin
   Result:= inherited GetParams;
   SetLength(Result, Length(Result)+1);
   Result[High(Result)]:= FRoundingParam;
+end;
+
+procedure TRoundedRectFigure.Save(var AFile: TextFile);
+begin
+  inherited Save(AFile);
+  Write(AFile, FRoundingParam.Value, ' ');
 end;
 
 constructor TFigures.Create;
@@ -738,6 +907,38 @@ begin
   FBounds.Height:= Max.Y-FBounds.TopLeft.Y;
 end;
 
+function TFigures.CompareFigureClass(AClassName: String): TFigureClass;
+var
+  fc: TFigureClass;
+begin
+  for fc in GetFigureClasses do begin
+    if fc.ClassName = AClassName then Exit(fc);
+  end;
+  Result:= nil;
+end;
+
+function TFigures.CreateFigure(AClassName: String): TFigure;
+{var
+  fcs: TFigureClassArray;
+  f: TFigure;
+  i: Integer;}
+begin
+  //fcs:= GetFigureClasses;     (?) WTF (?)
+  {for i:= 0 to High(fcs) do begin
+    f:= TLineFigure.Create;//fcs[i].Create;
+    if f.ClassName = AClassName then Exit(f)
+    else f.Free;
+  end;}
+  case AClassName of
+    'TLineFigure' : Exit(TLineFigure.Create);
+    'TRectFigure' : Exit(TRectFigure.Create);
+    'TEllipseFigure' : Exit(TEllipseFigure.Create);
+    'TRegularPolygonFigure' : Exit(TRegularPolygonFigure.Create);
+    'TRoundedRectFigure' : Exit(TRoundedRectFigure.Create);
+  end;
+  Result:= nil;
+end;
+
 function TFigures.RemoveLastFigure: Boolean;
 begin
   if(Length(FContent) = 0) then Exit(false);
@@ -781,6 +982,50 @@ begin
     FContent[i].Draw(APaintSpace);
 end;
 
+procedure TFigures.Save(var AFile: TextFile);
+var
+  f: TFigure;
+begin
+  WriteLn(AFile, '## ', Length(Content), ' ');
+  for f in Content do begin
+    Write(AFile, '# '+f.ClassName+' ');
+    f.Save(AFile);
+    Writeln(AFile, '');
+  end;
+end;
+
+procedure TFigures.Load(var AFile: TextFile);
+var
+  f: TFigure;
+  str: String;
+  i: Integer;
+  fClassName, fParamsStr: String;
+begin
+  for f in FContent do
+    f.Free;
+  FContent:= nil;
+
+  while Pos('##', str) = 0 do begin
+    Readln(AFile, str);
+  end;
+  str:= RightStr(str, Length(str)-Pos('##', str)-2);
+  SetLength(FContent, StrToInt(Trim(str)));
+
+  for i:= 0 to High(FContent) do begin
+    while Pos('#', str) = 0 do
+      Readln(AFile, str);
+    str:= RightStr(str, Length(str)-Pos('#', str)-1);
+    str:= Trim(str);
+    fClassName:= LeftStr(str, Pos(' ', str)-1);
+    fParamsStr:= RightStr(str, Length(str)-Pos(' ', str));
+    FContent[i]:= CreateFigure(fClassName);
+    FContent[i].Load(fParamsStr);
+  end;
+  if Assigned(FFigureAddEvent) then begin
+    FFigureAddEvent;
+  end;
+end;
+
 destructor TFigures.Destroy;
 var
   f: TFigure;
@@ -790,4 +1035,3 @@ begin
 end;
 
 end.
-

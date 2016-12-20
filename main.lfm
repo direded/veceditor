@@ -1,7 +1,7 @@
 object MainForm: TMainForm
-  Left = 806
+  Left = 915
   Height = 600
-  Top = 164
+  Top = 138
   Width = 800
   Caption = 'Graphic editor'
   ClientHeight = 600
@@ -208,6 +208,18 @@ object MainForm: TMainForm
     top = 65508
     object FileSubmenu: TMenuItem
       Caption = 'File'
+      object SaveItem: TMenuItem
+        Caption = 'Save'
+        OnClick = SaveItemClick
+      end
+      object SaveAsItem: TMenuItem
+        Caption = 'Save as..'
+        OnClick = SaveAsItemClick
+      end
+      object Load: TMenuItem
+        Caption = 'Load..'
+        OnClick = LoadClick
+      end
       object ExitItem: TMenuItem
         Caption = 'Exit'
         OnClick = ExitItemClick
@@ -268,6 +280,10 @@ object MainForm: TMainForm
       'ColorS=F0FBFF'
       'ColorT=A4A0A0'
     )
+    top = 65504
+  end
+  object SaveDialog: TSaveDialog
+    left = 65504
     top = 65504
   end
 end

@@ -7,7 +7,7 @@ interface
 uses
 	Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, Menus,
   ExtCtrls, Buttons, About, UTools, UFigures, Grids, StdCtrls, Spin,
-  UPaintSpace, UDoublePoint, Math, Types, UFigureParams;
+  UPaintSpace, UDoublePoint, Math, Types, UFigureParams, LCLType, strutils;
 
 type
 
@@ -15,6 +15,10 @@ type
   TMainForm = class(TForm)
   published
     BottomPanel: TPanel;
+    SaveDialog: TSaveDialog;
+    SaveItem: TMenuItem;
+    SaveAsItem: TMenuItem;
+    Load: TMenuItem;
     PaintSpacePanel: TPanel;
     ScaleFullExtentBtn: TButton;
     ColorBarGrid: TDrawGrid;
@@ -54,6 +58,7 @@ type
     procedure AboutItemClick(Sender: TObject);
     procedure ExitItemClick(Sender: TObject);
     procedure HoriPaintSpaceScrlChange(Sender: TObject);
+    procedure LoadClick(Sender: TObject);
     procedure MainFormKeyPress(Sender: TObject; var Key: char);
     procedure MainFormCreate(Sender: TObject);
     procedure PaintSpacePaintBoxMouseDown(Sender: TObject; Button: TMouseButton;
@@ -68,6 +73,8 @@ type
     procedure PaintSpacePaintBoxPaint(Sender: TObject);
     procedure PaintSpacePaintBoxResize(Sender: TObject);
     procedure PenColorPanelDblClick(Sender: TObject);
+    procedure SaveAsItemClick(Sender: TObject);
+    procedure SaveItemClick(Sender: TObject);
     procedure ScaleFullExtentBtnClick(Sender: TObject);
     procedure ScaleSpinChange(Sender: TObject);
     procedure ToolBtnClick(Sender: TObject);
@@ -77,6 +84,9 @@ type
     procedure PaintSpacePositionChange;
     procedure FiguresFigureAdd;
     procedure ToolParamsListChange;
+    procedure SaveFile(AFilePath: String);
+    procedure UpdateFormTitle;
+    procedure FigureAdded;
   end;
 
 	TColorArray = array of TColor;
@@ -95,6 +105,11 @@ var
   PaintSpace: TPaintSpace;
   Figures: TFigures;
   ColorPalette: TColorArray;
+  FileName: String;
+  FilePath: String;
+
+const
+  VecEditorName: String = 'Graphic editor';
 
 implementation
 
@@ -110,6 +125,33 @@ begin
   PaintSpace.Position:= (GetDoublePoint(HoriPaintSpaceScrl.Position, PaintSpace.Position.Y));
 end;
 
+procedure TMainForm.LoadClick(Sender: TObject);
+var
+  FileToLoad: TextFile;
+  Answer: Integer;
+  OpenDialog: TOpenDialog;
+begin
+  Answer:= Application.MessageBox('Do you want to save current file?', '', MB_ICONQUESTION + MB_YESNOCANCEL);
+  if Answer = IDYES then
+    SaveFile(FileName)
+  else if Answer = IDCANCEL then Exit
+  else if Answer = IDCLOSE then Exit;
+  OpenDialog:= TOpenDialog.Create(nil);
+  OpenDialog.InitialDir:= GetCurrentDir;
+  OpenDialog.Title:= 'Open';
+  OpenDialog.DefaultExt:= 'vce';
+  OpenDialog.Filter:= '|*.vce|';
+  OpenDialog.FileName:= FileName;
+  if OpenDialog.Execute then begin
+    if FileExists(OpenDialog.FileName) then begin
+      AssignFile(FileToLoad, OpenDialog.FileName);
+      Reset(FileToLoad);
+      Figures.Load(FileToLoad);
+      CloseFile(FileToLoad);
+    end;
+  end;
+end;
+
 procedure TMainForm.MainFormKeyPress(Sender: TObject; var Key: char);
 begin
 end;
@@ -119,6 +161,7 @@ var
   i: Integer;
   ToolBtn: TBitBtn;
 begin
+  UpdateFormTitle;
   PaintSpace:= TPaintSpace.Create(PaintSpacePaintBox, GetDoublePoint(1600, 900));
   PaintSpace.OnScaleChange:= @PaintSpaceScaleChange;
   PaintSpace.OnPositionChange:= @PaintSpacePositionChange;
@@ -144,6 +187,7 @@ begin
   BrushColorPanel.Top:= ToolBtn.Top + ToolBtn.Height + BrushColorPanel.Top;
   BrushColorPanel.Color:= CurrentTool.FigureColors.Brush;
   ColorBarGrid.RowCount:= Length(ColorPalette);
+  CurrentTool.Tool.SetParamsPanel(ToolParamsPanel);
 end;
 
 procedure TMainForm.PaintSpacePaintBoxMouseDown(Sender: TObject; Button: TMouseButton;
@@ -208,6 +252,34 @@ begin
   CurrentTool.FigureColors.Pen:= SelectColorDialog.Color;
 	CurrentTool.Tool.SetParamColor(CurrentTool.FigureColors);
 	PenColorPanel.Color:= CurrentTool.FigureColors.Pen;
+end;
+
+procedure TMainForm.SaveAsItemClick(Sender: TObject);
+var
+  i, j: Integer;
+begin
+  SaveDialog.InitialDir:= GetCurrentDir;
+  SaveDialog.Title:= 'Save As';
+  SaveDialog.DefaultExt:= 'vce';
+  SaveDialog.Filter:= '|*.vce|';
+  SaveDialog.FileName:= FileName;
+  if SaveDialog.Execute then begin
+    if FileExists(SaveDialog.FileName) then begin
+      if (Application.MessageBox('File exist. Overwrite?', '', MB_ICONQUESTION + MB_YESNO) = IDYES) then begin
+        SaveFile(SaveDialog.FileName);
+      end else begin
+        SaveAsItem.Click;
+        Exit;
+      end;
+    end else begin
+      SaveFile(SaveDialog.FileName);
+    end;
+  end;
+end;
+
+procedure TMainForm.SaveItemClick(Sender: TObject);
+begin
+  SaveFile(FileName);
 end;
 
 procedure TMainForm.ScaleFullExtentBtnClick(Sender: TObject);
@@ -321,11 +393,43 @@ procedure TMainForm.FiguresFigureAdd;
 begin
   UpdateVertScroll(VertPaintSpaceScrl, PaintSpace);
   UpdateHoriScroll(HoriPaintSpaceScrl, PaintSpace);
+  PaintSpacePaintBox.Invalidate;
 end;
 
 procedure TMainForm.ToolParamsListChange;
 begin
   CurrentTool.Tool.SetParamsPanel(ToolParamsPanel);
+end;
+
+procedure TMainForm.SaveFile(AFilePath: String);
+var
+  FileToSave: TextFile;
+  i: Integer;
+begin
+  AssignFile(FileToSave, AFilePath);
+  Rewrite(FileToSave);
+  WriteLn(FileToSave, '^VCE');
+  Figures.Save(FileToSave);
+  for i:= High(AFilePath) downto Low(AFilePath) do
+    if AFilePath[i] = '/' then Break;
+  if Pos('/', AFilePath) <> 0 then
+    FileName:= RightStr(AFilePath, Length(AFilePath)-i);
+  FilePath:= AFilePath;
+  UpdateFormTitle;
+  CloseFile(FileToSave);
+end;
+
+procedure TMainForm.UpdateFormTitle;
+begin
+  MainForm.Caption:= VecEditorName;
+  if FileName <> '' then
+    MainForm.Caption:= MainForm.Caption+' - '+FileName;
+end;
+
+procedure TMainForm.FigureAdded;
+begin
+  PaintSpacePaintBox.Invalidate;
+  Writeln('hui');
 end;
 
 procedure TMainForm.PaintSpaceScaleChange;
@@ -371,6 +475,7 @@ begin
 end;
 
 initialization
+  FileName:= 'untitled.vce';
 	Figures:= TFigures.Create;
   CurrentTool.Tool:= Tools[0];
   CurrentTool.FigureColors:= MakeFigureColors(clBlack, clWhite);
