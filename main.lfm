@@ -1,7 +1,7 @@
 object MainForm: TMainForm
-  Left = 915
+  Left = 875
   Height = 600
-  Top = 138
+  Top = 115
   Width = 800
   Caption = 'Graphic editor'
   ClientHeight = 600
@@ -225,14 +225,30 @@ object MainForm: TMainForm
         OnClick = ExitItemClick
       end
     end
+    object EditSubMenu: TMenuItem
+      Caption = 'Edit'
+      object UndoItem: TMenuItem
+        Caption = 'Undo'
+        ShortCut = 16474
+        OnClick = UndoItemClick
+      end
+      object RedoItem: TMenuItem
+        Caption = 'Redo'
+        ShortCut = 24666
+        OnClick = RedoItemClick
+      end
+    end
     object ObjManagerSubmenu: TMenuItem
       Caption = 'Object manager'
+      Enabled = False
       object DelLastObjItem: TMenuItem
         Caption = 'Delete last object'
+        Enabled = False
         OnClick = DelLastObjItemClick
       end
       object DelAllObjMenuItem: TMenuItem
         Caption = 'Delete all'
+        Enabled = False
         OnClick = DelAllObjMenuItemClick
       end
     end

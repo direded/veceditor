@@ -7,7 +7,7 @@ interface
 uses
 	Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, Menus,
   ExtCtrls, Buttons, About, UTools, UFigures, Grids, StdCtrls, Spin,
-  UPaintSpace, UDoublePoint, Math, Types, UFigureParams, LCLType, strutils;
+  UPaintSpace, UDoublePoint, Math, Types, UFigureParams, LCLType, strutils, UHistory;
 
 type
 
@@ -15,6 +15,9 @@ type
   TMainForm = class(TForm)
   published
     BottomPanel: TPanel;
+    EditSubMenu: TMenuItem;
+    UndoItem: TMenuItem;
+    RedoItem: TMenuItem;
     SaveDialog: TSaveDialog;
     SaveItem: TMenuItem;
     SaveAsItem: TMenuItem;
@@ -73,12 +76,14 @@ type
     procedure PaintSpacePaintBoxPaint(Sender: TObject);
     procedure PaintSpacePaintBoxResize(Sender: TObject);
     procedure PenColorPanelDblClick(Sender: TObject);
+    procedure RedoItemClick(Sender: TObject);
     procedure SaveAsItemClick(Sender: TObject);
     procedure SaveItemClick(Sender: TObject);
     procedure ScaleFullExtentBtnClick(Sender: TObject);
     procedure ScaleSpinChange(Sender: TObject);
     procedure ToolBtnClick(Sender: TObject);
     procedure DelLastObjItemClick(Sender: TObject);
+    procedure UndoItemClick(Sender: TObject);
     procedure VertPaintSpaceScrlChange(Sender: TObject);
     procedure PaintSpaceScaleChange;
     procedure PaintSpacePositionChange;
@@ -107,6 +112,7 @@ var
   ColorPalette: TColorArray;
   FileName: String;
   FilePath: String;
+  History: THistory;
 
 const
   VecEditorName: String = 'Graphic editor';
@@ -154,6 +160,7 @@ end;
 
 procedure TMainForm.MainFormKeyPress(Sender: TObject; var Key: char);
 begin
+ if Key = '1' then History.AddState;
 end;
 
 procedure TMainForm.MainFormCreate(Sender: TObject);
@@ -254,6 +261,11 @@ begin
 	PenColorPanel.Color:= CurrentTool.FigureColors.Pen;
 end;
 
+procedure TMainForm.RedoItemClick(Sender: TObject);
+begin
+  History.Redo;
+end;
+
 procedure TMainForm.SaveAsItemClick(Sender: TObject);
 var
   i, j: Integer;
@@ -312,6 +324,11 @@ procedure TMainForm.DelLastObjItemClick(Sender: TObject);
 begin
   Figures.RemoveLastFigure;
   PaintSpacePaintBox.Invalidate;
+end;
+
+procedure TMainForm.UndoItemClick(Sender: TObject);
+begin
+  History.Undo;
 end;
 
 procedure TMainForm.VertPaintSpaceScrlChange(Sender: TObject);
@@ -477,6 +494,8 @@ end;
 initialization
   FileName:= 'untitled.vce';
 	Figures:= TFigures.Create;
+  History:= THistory.Create;
+  History.SetFigures(Figures);
   CurrentTool.Tool:= Tools[0];
   CurrentTool.FigureColors:= MakeFigureColors(clBlack, clWhite);
   CurrentTool.State:= ctsReady;
