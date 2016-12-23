@@ -36,6 +36,8 @@ type
   operator =(A: TPoint; B: TPoint): Boolean;
   operator :=(A: TPoint): TDoublePoint;
 
+  function CopyOf(Value: TDoublePointArray): TDoublePointArray; overload;
+
   function GetVecMultiplyLength(A, B: TDoublePoint): Double;
   function GetDoublePoint(AX: Double = 0; AY: Double = 0): TDoublePoint;
   function PointToDoublePoint(APoint: TPoint): TDoublePoint;
@@ -148,6 +150,15 @@ operator :=(A: TPoint): TDoublePoint;
 begin
   Result.X:= A.X;
   Result.Y:= A.Y;
+end;
+
+function CopyOf(Value: TDoublePointArray): TDoublePointArray;
+var
+  i: Integer;
+begin
+  SetLength(Result, Length(Value));
+  for i:= Low(Value) to High(Value) do
+    Result[i]:= Value[i];
 end;
 
 function GetVecMultiplyLength(A, B: TDoublePoint): Double;

@@ -35,7 +35,7 @@
         <PackageName Value="LCL"/>
       </Item2>
     </RequiredPackages>
-    <Units Count="12">
+    <Units Count="13">
       <Unit0>
         <Filename Value="veceditor.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -101,6 +101,11 @@
         <IsPartOfProject Value="True"/>
         <UnitName Value="UParamEditors"/>
       </Unit11>
+      <Unit12>
+        <Filename Value="uhistory.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="UHistory"/>
+      </Unit12>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

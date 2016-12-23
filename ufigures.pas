@@ -25,6 +25,7 @@ type
     procedure SetSelectionParams(ACanvas:TCanvas); virtual; abstract;
     procedure LoadParams(var AParamStr: String); virtual; //abstract;
     procedure LoadPoints(var AParamStr: String);
+    procedure CopyParamsTo(AFigure: TFigure); virtual;
   public
     property Points: TDoublePointArray read FPoints write FPoints;
     property Bounds: TTwoDoublePointsArray read FBounds;
@@ -42,6 +43,7 @@ type
     procedure Save(var AFile: TextFile); virtual;
     procedure Draw(APaintSpace: TPaintSpace); virtual;
     procedure Load(AParamStr: String);
+    function Copy: TFigure; virtual;
   end;
 
   TSelectionChangeProcedure = procedure(AFigure: TFigure) of object;
@@ -61,6 +63,7 @@ type
     procedure SetFigureParams(ACanvas: TCanvas); override;
     procedure DrawRaw(APaintSpace: TPaintSpace); override;
     procedure LoadParams(var AParamStr: String); override;
+    procedure CopyParamsTo(AFigure: TFigure); override;
   public
     property PenParams: TPenParams read GetLineParams;
     constructor Create;
@@ -73,6 +76,7 @@ type
     function IsPartInRect(A, B: TDoublePoint): Boolean; override;
     function IsValid: Boolean; override;
     procedure Save(var AFile: TextFile); override;
+    function Copy: TFigure; override;
   end;
 
   TShapeFigure = class(TLineFigure)
@@ -84,6 +88,7 @@ type
     function GetBrushParams: TBrushParams;
     procedure SetBrushParams(AValue: TBrushParams);
     procedure LoadParams(var AParamStr: String); override;
+    procedure CopyParamsTo(AFigure: TFigure); override;
   public
     constructor Create;
     property ShapeColor: TColorParam read FShapeColor;
@@ -100,6 +105,7 @@ type
     constructor Create;
     procedure DrawRaw(APaintSpace: TPaintSpace); override;
     function IsPointInclude(APoint: TDoublePoint): Boolean; override;
+    function Copy: TFigure; override;
   end;
 
   TRegularPolygonFigure = class(TShapeFigure)
@@ -110,6 +116,7 @@ type
     function GetAngleCount: Integer;
     procedure SetAngleCount(AValue: Integer);
     procedure LoadParams(var AParamStr: String); override;
+    procedure CopyParamsTo(AFigure: TFigure); override;
   public
     property AngleCount: Integer read GetAngleCount;
     property AngleCountParam: TAngleCountParam read FAngleCountParam;
@@ -118,6 +125,7 @@ type
     function GetParams: TFigureParamArray; override;
     function IsPointInclude(APoint: TDoublePoint): Boolean; override;
     procedure Save(var AFile: TextFile); override;
+    function Copy: TFigure; override;
   end;
 
   TRectSplitOffFigure = class(TRectFigure)
@@ -134,6 +142,7 @@ type
 	public
     constructor Create;
     function IsPointInclude(APoint: TDoublePoint): Boolean; override;
+    function Copy: TFigure; override;
   end;
 
   TRoundedRectFigure = class(TShapeFigure)
@@ -145,6 +154,7 @@ type
     procedure DrawSelection(APaintSpace: TPaintSpace); override;
     procedure DrawRaw(APaintSpace: TPaintSpace); override;
     procedure LoadParams(var AParamStr: String); override;
+    procedure CopyParamsTo(AFigure: TFigure); override;
 	public
     property Rounding: Integer read GetRounding write SetRounding;
     property RoundingParam: TRoundingParam read FRoundingParam;
@@ -152,6 +162,7 @@ type
     function IsPointInclude(APoint: TDoublePoint): Boolean; override;
     function GetParams: TFigureParamArray; override;
     procedure Save(var AFile: TextFile); override;
+    function Copy: TFigure; override;
   end;
 
   TFigures = class
@@ -188,11 +199,15 @@ type
   	procedure Draw(APaintSpace: TPaintSpace);
     procedure Save(var AFile: TextFile);
     procedure Load(var AFile: TextFile);
+    function CopyContent: TFigureArray;
+    procedure SetContent(AValue: TFigureArray);
     destructor Destroy; override;
   end;
 
   procedure SetBounds(var ABounds: TTwoDoublePointsArray; APoint: TDoublePoint);
   function GetFigureClasses: TFigureClassArray;
+
+  function CopyOf(Arr: TFigureArray): TFigureArray; overload;
 
 implementation
 
@@ -216,6 +231,16 @@ begin
   Result[2]:= TEllipseFigure;
   Result[3]:= TRegularPolygonFigure;
   Result[4]:= TRoundedRectFigure;
+end;
+
+function CopyOf(Arr: TFigureArray): TFigureArray;
+var
+  i: Integer;
+begin
+  SetLength(Result, Length(Arr));
+  for i:= Low(Arr) to High(Arr) do begin
+    Result[i]:= Arr[i].Copy;
+  end;
 end;
 
 class procedure TFigure.SetSelectionEllipseParams(APen: TPen; ABrush: TBrush);
@@ -252,6 +277,11 @@ begin
   AParamStr:= Trim(pointsStr)+' ';
 end;
 
+procedure TFigure.CopyParamsTo(AFigure: TFigure);
+begin
+  AFigure.Points:= CopyOf(FPoints);
+end;
+
 procedure TFigure.IncreasePointsLength;
 begin
   SetLength(FPoints, Length(FPoints)+1);
@@ -259,7 +289,6 @@ end;
 
 constructor TFigure.Create;
 begin
-  Writeln('TFigure.Create triggered');
 end;
 
 procedure TFigure.Move(AValue: TDoublePoint);
@@ -316,6 +345,13 @@ begin
   LoadParams(AParamStr);
 end;
 
+function TFigure.Copy: TFigure;
+begin
+  //Result:= TFigure(Self.ClassType.Create);
+  //Result:= TLineFigure.Create;
+  //Result.Points:= CopyOf(FPoints);
+end;
+
 procedure TLineFigure.DrawSelection(APaintSpace: TPaintSpace);
 begin
   with APaintSpace do begin
@@ -356,7 +392,6 @@ end;
 
 constructor TLineFigure.Create;
 begin
-  writeln('TLineFigure.Create executed');
   SetLength(FPoints, 2);
   FLineWidth:= TLineWidthParam.Create;
   FLineStyle:= TLineStyleParam.Create;
@@ -418,6 +453,12 @@ begin
   Write(AFile, FLineWidth.Value, ' ');
 end;
 
+function TLineFigure.Copy: TFigure;
+begin
+  Result:= TLineFigure.Create;
+  CopyParamsTo(Result);
+end;
+
 procedure TLineFigure.LoadParams(var AParamStr: String);
 var
   str, otherStr: String;
@@ -432,6 +473,15 @@ begin
   otherStr:= RightStr(otherStr, Length(otherStr)-Length(str)-1);
   FLineWidth.Value:= StrToInt(str);
   AParamStr:= otherStr;
+end;
+
+procedure TLineFigure.CopyParamsTo(AFigure: TFigure);
+begin
+  inherited CopyParamsTo(AFigure);
+  if not (AFigure is TLineFigure) then Exit;
+  TLineFigure(AFigure).LineStyle.Value:= FLineStyle.Value;
+  TLineFigure(AFigure).LineWidth.Value:= FLineWidth.Value;
+  TLineFigure(AFigure).LineColor.Value:= FLineColor.Value;
 end;
 
 procedure TShapeFigure.Save(var AFile: TextFile);
@@ -480,6 +530,13 @@ begin
   AParamStr:= otherStr;
 end;
 
+procedure TShapeFigure.CopyParamsTo(AFigure: TFigure);
+begin
+  inherited CopyParamsTo(AFigure);
+  TShapeFigure(AFigure).ShapeStyle.Value:= FShapeStyle.Value;
+  TShapeFigure(AFigure).ShapeColor.Value:= FShapeColor.Value;
+end;
+
 function TShapeFigure.IsPartInRect(A, B: TDoublePoint): Boolean;
 var
   p: TDoublePoint;
@@ -494,7 +551,6 @@ end;
 constructor TShapeFigure.Create;
 begin
   inherited Create;
-  writeln('TShapeFigure.Create executed');
   FShapeColor:= TColorParam.Create;
   FShapeStyle:= TShapeStyleParam.Create;
 end;
@@ -530,6 +586,12 @@ begin
     (FBounds[0].Y<=APoint.Y) and (APoint.Y<=FBounds[1].Y) then
     Exit(true);
   Exit(false);
+end;
+
+function TRectFigure.Copy: TFigure;
+begin
+  Result:= TRectFigure.Create;
+  CopyParamsTo(Result);
 end;
 
 procedure TRegularPolygonFigure.DrawSelection(APaintSpace: TPaintSpace);
@@ -580,6 +642,12 @@ begin
   AParamStr:= otherStr;
 end;
 
+procedure TRegularPolygonFigure.CopyParamsTo(AFigure: TFigure);
+begin
+  inherited CopyParamsTo(AFigure);
+  TRegularPolygonFigure(AFigure).AngleCountParam.Value:= FAngleCountParam.Value;
+end;
+
 constructor TRegularPolygonFigure.Create;
 begin
   inherited;
@@ -622,6 +690,12 @@ procedure TRegularPolygonFigure.Save(var AFile: TextFile);
 begin
   inherited Save(AFile);
   Write(AFile, FAngleCountParam.Value, ' ');
+end;
+
+function TRegularPolygonFigure.Copy: TFigure;
+begin
+  Result:= TRegularPolygonFigure.Create;
+  CopyParamsTo(Result);
 end;
 
 constructor TRectSplitOffFigure.Create;
@@ -693,6 +767,12 @@ begin
   Exit(false);
 end;
 
+function TEllipseFigure.Copy: TFigure;
+begin
+  Result:= TEllipseFigure.Create;
+  CopyParamsTo(Result);
+end;
+
 function TRoundedRectFigure.GetRounding: Integer;
 begin
   Result:= FRoundingParam.Value;
@@ -727,6 +807,12 @@ begin
   AParamStr:= otherStr;
 end;
 
+procedure TRoundedRectFigure.CopyParamsTo(AFigure: TFigure);
+begin
+  inherited CopyParamsTo(AFigure);
+  TRoundedRectFigure(AFigure).RoundingParam.Value:= FRoundingParam.Value;
+end;
+
 constructor TRoundedRectFigure.Create;
 begin
   inherited Create;
@@ -751,6 +837,12 @@ procedure TRoundedRectFigure.Save(var AFile: TextFile);
 begin
   inherited Save(AFile);
   Write(AFile, FRoundingParam.Value, ' ');
+end;
+
+function TRoundedRectFigure.Copy: TFigure;
+begin
+  Result:= TRoundedRectFigure.Create;
+  CopyParamsTo(Result);
 end;
 
 constructor TFigures.Create;
@@ -1021,9 +1113,25 @@ begin
     FContent[i]:= CreateFigure(fClassName);
     FContent[i].Load(fParamsStr);
   end;
-  if Assigned(FFigureAddEvent) then begin
+  if Assigned(FFigureAddEvent) then
     FFigureAddEvent;
-  end;
+end;
+
+function TFigures.CopyContent: TFigureArray;
+begin
+  Result:= CopyOf(FContent);
+end;
+
+procedure TFigures.SetContent(AValue: TFigureArray);
+var
+  f: TFigure;
+begin
+  for f in FContent do
+    f.Free;
+  SetLength(FContent, 0);
+  FContent:= CopyOf(AValue);
+  if Assigned(FFigureAddEvent) then
+    FFigureAddEvent;
 end;
 
 destructor TFigures.Destroy;
