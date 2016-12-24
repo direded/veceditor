@@ -188,6 +188,7 @@ begin
     Tools[i].PaintSpace:= PaintSpace;
     Tools[i].Figures:= Figures;
     Tools[i].OnParamsListChange:= @ToolParamsListChange;
+    Tools[i].OnHistoryChange:= @(History.AddState);
   end;
   PenColorPanel.Top:= ToolBtn.Top + ToolBtn.Height + PenColorPanel.Top;
   PenColorPanel.Color:= CurrentTool.FigureColors.Pen;

@@ -27,10 +27,12 @@ type
     FMetadata: TToolMetadata;
     FFigures: TFigures;
     FPaintSpace: TPaintSpace;
+    FOnHistoryChange: TEventHandler;
     FOnParamChange: TEventHandler;
     FOnParamsListChange: TEventHandler;
   public
     constructor Create;
+    property OnHistoryChange: TEventHandler read FOnHistoryChange write FOnHistoryChange;
     property OnParamChange: TEventHandler read FOnParamChange write FOnParamChange;
     property OnParamsListChange: TEventHandler read FOnParamsListChange write FOnParamsListChange;
     property Figures: TFigures read FFigures write FFigures;
@@ -250,6 +252,7 @@ end;
 
 procedure TSelectTool.ParamChange;
 begin
+  FOnHistoryChange;
   FPaintSpace.PaintBox.Invalidate;
 end;
 
@@ -313,6 +316,7 @@ begin
         editor.AttachParams(FCommonParams[i]);
         AddFigureParamEditor(editor);
         editor.OnParamChange:= @ParamChange;
+        editor.OnHistoryChange:= FOnHistoryChange;
         //writeln(editor.GetParamType.ClassName);
       end
       else
@@ -412,7 +416,10 @@ end;
 procedure TSelectTool.MouseUp(APoint: TDoublePoint; AShift: TShiftState);
 begin
   FFigures.RemoveLastFigure;
-  if FIsFirstOnFigure then Exit;
+  if FIsFirstOnFigure then begin
+    FOnHistoryChange;
+    Exit;
+  end;
   if (FFirstPoint-APoint).Length > CLICK_SIZE then begin
     if FFirstPoint.X<APoint.X then begin
       if ssShift in AShift then
@@ -531,6 +538,8 @@ begin
     FFigures.BakeLastFigure;
     FFigures.GetBounds(Min, Max);
     FPaintSpace.SetFiguresBounds(Min, Max);
+    if Assigned(FOnHistoryChange) then
+      FOnHistoryChange;
   end else
     FFigures.RemoveLastFigure;
 end;
