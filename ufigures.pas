@@ -28,7 +28,7 @@ type
     procedure CopyParamsTo(AFigure: TFigure); virtual;
   public
     property Points: TDoublePointArray read FPoints write FPoints;
-    property Bounds: TTwoDoublePointsArray read FBounds;
+    property Bounds: TTwoDoublePointsArray read FBounds write FBounds;
     property Selected: Boolean read FSelected write FSelected;
     constructor Create;
     function IsPointInclude(APoint: TDoublePoint): Boolean; virtual; abstract;
@@ -478,10 +478,10 @@ end;
 procedure TLineFigure.CopyParamsTo(AFigure: TFigure);
 begin
   inherited CopyParamsTo(AFigure);
-  if not (AFigure is TLineFigure) then Exit;
   TLineFigure(AFigure).LineStyle.Value:= FLineStyle.Value;
   TLineFigure(AFigure).LineWidth.Value:= FLineWidth.Value;
   TLineFigure(AFigure).LineColor.Value:= FLineColor.Value;
+  AFigure.Bounds:= FBounds;
 end;
 
 procedure TShapeFigure.Save(var AFile: TextFile);
