@@ -259,10 +259,7 @@ procedure TLineWidthPEditor.ParamChange(Sender: TObject);
 var
   i: Integer;
 begin
-  if not IsParamRealChanges then begin
-    IsParamRealChanges:= true;
-    Exit;
-  end;
+  if GetParam.Value = TSpinEdit(Sender).Value then Exit;
   GetParam.Value:= TSpinEdit(Sender).Value;
   for i:= 0 to High(FParams) do
     TLineWidthParam(FParams[i]).Value:= TSpinEdit(Sender).Value;
@@ -309,10 +306,7 @@ procedure TLineStylePEditor.ParamChange(Sender: TObject);
 var
   i: Integer;
 begin
-  if not IsParamRealChanges then begin
-    IsParamRealChanges:= true;
-    Exit;
-  end;
+  if GetParam.Value = TFPPenStyle(TComboBox(Sender).ItemIndex) then Exit;
   GetParam.Value:= TFPPenStyle(TComboBox(Sender).ItemIndex);
   for i:= 0 to High(FParams) do
     TLineStyleParam(FParams[i]).Value:= TFPPenStyle(TComboBox(Sender).ItemIndex);
@@ -345,10 +339,7 @@ procedure TShapeStylePEditor.ParamChange(Sender: TObject);
 var
   i: Integer;
 begin
-  if not IsParamRealChanges then begin
-    IsParamRealChanges:= true;
-    Exit;
-  end;
+  if GetParam.Value = TFPBrushStyle(TComboBox(Sender).ItemIndex) then Exit;
   GetParam.Value:= TFPBrushStyle(TComboBox(Sender).ItemIndex);
   for i:= 0 to High(FParams) do
     TShapeStyleParam(FParams[i]).Value:= TFPBrushStyle(TComboBox(Sender).ItemIndex);
@@ -398,10 +389,7 @@ procedure TAngleCountPEditor.ParamChange(Sender: TObject);
 var
   i: Integer;
 begin
-  if not IsParamRealChanges then begin
-    IsParamRealChanges:= true;
-    Exit;
-  end;
+  if GetParam.Value = TSpinEdit(Sender).Value then Exit;
   GetParam.Value:= TSpinEdit(Sender).Value;
   for i:= 0 to High(FParams) do
     TAngleCountParam(FParams[i]).Value:= TSpinEdit(Sender).Value;
@@ -433,10 +421,7 @@ procedure TRoundingPEditor.ParamChange(Sender: TObject);
 var
   i: Integer;
 begin
-  if not IsParamRealChanges then begin
-    IsParamRealChanges:= true;
-    Exit;
-  end;
+  if GetParam.Value = TSpinEdit(Sender).Value then Exit;
   GetParam.Value:= TSpinEdit(Sender).Value;
   for i:= 0 to High(FParams) do
     TRoundingParam(FParams[i]).Value:= TSpinEdit(Sender).Value;
