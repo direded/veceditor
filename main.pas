@@ -176,6 +176,7 @@ begin
   ScaleSpinEdit.MaxValue:= PaintSpace.MAX_SCALE*100;
   PaintSpace.Scale:= 1;
   PaintSpace.Position:= GetDoublePoint;
+  History.OnStateChange:= @MainForm.UpdateFormTitle;
   for i:= Low(Tools) to High(Tools) do begin
   	ToolBtn:= TBitBtn.Create(nil);
     ToolBtn.Parent:= ToolsPanel;
@@ -435,6 +436,8 @@ begin
   FilePath:= AFilePath;
   UpdateFormTitle;
   CloseFile(FileToSave);
+  History.SaveState;
+  UpdateFormTitle;
 end;
 
 procedure TMainForm.UpdateFormTitle;
@@ -442,12 +445,13 @@ begin
   MainForm.Caption:= VecEditorName;
   if FileName <> '' then
     MainForm.Caption:= MainForm.Caption+' - '+FileName;
+  if not History.IsSaved then
+    MainForm.Caption:= MainForm.Caption+' *';
 end;
 
 procedure TMainForm.FigureAdded;
 begin
   PaintSpacePaintBox.Invalidate;
-  Writeln('hui');
 end;
 
 procedure TMainForm.PaintSpaceScaleChange;

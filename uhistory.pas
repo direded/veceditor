@@ -5,7 +5,7 @@ unit UHistory;
 interface
 
 uses
-  Classes, SysUtils, UFigures;
+  Classes, SysUtils, UFigures, UUtils;
 
 type
 
@@ -16,17 +16,21 @@ type
   var
     FFigures: TFigures;
     FStates: array[0..5] of TFigureArray;
-    FMinIndex, FIndex, FMaxIndex: Integer;
+    FMinIndex, FIndex, FMaxIndex, FSavedIndex: Integer;
+    FOnStateChange: TEventHandler;
     procedure IncIndex(var AValue: Integer);
     procedure DecIndex(var AValue: Integer);
     procedure IncIndex;
     procedure DecIndex;
   public
     constructor Create;
+    property  OnStateChange: TEventHandler read FOnStateChange write FOnStateChange;
+    function  IsSaved: Boolean;
     procedure SetFigures(AValue: TFigures);
     procedure Undo;
     procedure Redo;
     procedure AddState;
+    procedure SaveState;
   end;
 
 implementation
@@ -59,6 +63,7 @@ end;
 
 constructor THistory.Create;
 begin
+  FSavedIndex:= -1;
   FIndex:= 0;
   FMinIndex:= 0;
   FMaxIndex:= 1;
@@ -69,12 +74,19 @@ begin
   FFigures:= AValue;
 end;
 
+function THistory.IsSaved: Boolean;
+begin
+  Result:= FIndex = FSavedIndex;
+end;
+
 procedure THistory.Undo;
 begin
   if FIndex = FMinIndex then Exit;
   DecIndex;
   FFigures.SetContent(FStates[FIndex]);
   Writeln('THistrory.Undo executed'); // debug
+  if Assigned(FOnStateChange) then
+    FOnStateChange;
 end;
 
 procedure THistory.Redo;
@@ -86,6 +98,13 @@ begin
   end;
   FFigures.SetContent(FStates[FIndex]);
   Writeln('THistrory.Redo executed'); // debug
+  if Assigned(FOnStateChange) then
+    FOnStateChange;
+end;
+
+procedure THistory.SaveState;
+begin
+  FSavedIndex:= FIndex;
 end;
 
 procedure THistory.AddState;
@@ -95,8 +114,12 @@ begin
     IncIndex(FMinIndex);
   FMaxIndex:= FIndex;
   IncIndex(FMaxIndex);
+  if FIndex = FSavedIndex then
+    FSavedIndex:= -1;
   FStates[FIndex]:= FFigures.CopyContent;
   Writeln('THistrory.AddState executed'); // debug
+  if Assigned(FOnStateChange) then
+    FOnStateChange;
 end;
 
 end.
