@@ -15,7 +15,7 @@ type
   strict private
   var
     FFigures: TFigures;
-    FStates: array[0..5] of TFigureArray;
+    FStates: array[0..100] of TFigureArray;
     FMinIndex, FIndex, FMaxIndex, FSavedIndex: Integer;
     FOnStateChange: TEventHandler;
     procedure IncIndex(var AValue: Integer);
